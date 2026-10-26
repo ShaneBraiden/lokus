@@ -1,0 +1,29 @@
+{
+  "name": "lokus",
+  "private": true,
+  "type": "module",
+  "description": "Lokus assessment platform running the NorthrSim Clinical Trial Associate simulation",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c cyan,magenta \"npm run dev -w @lokus/api\" \"npm run dev -w @lokus/web\"",
+    "build": "npm run build -w @lokus/web && npm run build -w @lokus/api",
+    "start": "node apps/api/dist/server.js",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:generate": "npm run db:generate -w @lokus/api",
+    "db:migrate": "npm run db:migrate -w @lokus/api",
+    "db:seed": "npm run db:seed -w @lokus/api"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "concurrently": "^10.0.6",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  }
+}
