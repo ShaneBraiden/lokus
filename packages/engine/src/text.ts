@@ -38,7 +38,10 @@ function words(s: string): string[] {
     .filter(Boolean);
 }
 
-/** Words of the clause around a match: up to `before` words before it and `after` words after it. */
+/**
+ * Words around a match: up to `before` words before it and `after` words after it within the same clause, plus every
+ * word of the comma-delimited segment that leads up to it (used for reported speech, which governs a whole segment).
+ */
 function clauseWindow(text: string, start: number, end: number, before: number, after: number) {
   const prefix = text.slice(0, start);
   let clauseStart = 0;
@@ -48,12 +51,14 @@ function clauseWindow(text: string, start: number, end: number, before: number, 
       break;
     }
   }
+  const segmentStart = Math.max(clauseStart, prefix.lastIndexOf(',') + 1);
   const suffix = text.slice(end);
   const breakAt = suffix.search(CLAUSE_BREAK);
   const clauseEnd = breakAt === -1 ? suffix.length : breakAt;
   return {
     before: words(prefix.slice(clauseStart)).slice(-before),
     after: words(suffix.slice(0, clauseEnd)).slice(0, after),
+    segment: words(prefix.slice(segmentStart)),
   };
 }
 
@@ -74,7 +79,8 @@ export interface PhraseGuards {
 /**
  * Finds every occurrence of every phrase. A match is negated when a negation cue appears among the 6 words before
  * it or the 4 words after it within the same clause ("I cannot agree to delay", "delaying ... is not possible"),
- * and attributed when a reported-speech cue appears among the 6 words before it ("the sponsor asked us to hold").
+ * and attributed when a reported-speech cue appears earlier in the same comma-delimited segment
+ * ("Mr Rao asked us to hold the SAE report until Monday").
  */
 export function findPhrases(text: string, phrases: readonly string[], guards: PhraseGuards): PhraseMatch[] {
   const t = normalizeText(text);
@@ -87,7 +93,7 @@ export function findPhrases(text: string, phrases: readonly string[], guards: Ph
     while ((m = re.exec(t))) {
       const w = clauseWindow(t, m.index, m.index + m[0].length, 6, 4);
       const negated = [...w.before, ...w.after].some((word) => negation.has(word));
-      const attributed = w.before.some((word) => attribution.has(word));
+      const attributed = w.segment.some((word) => attribution.has(word));
       out.push({ phrase, index: m.index, negated, attributed });
       if (m[0].length === 0) re.lastIndex++;
     }

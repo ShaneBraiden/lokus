@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/server.ts",
+    "dev": "tsx watch --clear-screen=false src/server.ts --port=4000",
     "build": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",

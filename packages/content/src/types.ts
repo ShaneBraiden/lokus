@@ -1,4 +1,4 @@
-import type { CrfVisitKey, DocumentId } from '@lokus/shared';
+import type { ContentBlock, CrfVisitKey, DocumentId } from '@lokus/shared';
 
 export interface CrfVisitRecord {
   visit: CrfVisitKey;
@@ -24,13 +24,8 @@ export interface ParticipantCrf {
   visits: CrfVisitRecord[];
 }
 
-export type Block =
-  | { type: 'p'; text: string }
-  | { type: 'list'; items: string[] }
-  | { type: 'table'; headers: string[]; rows: string[][] }
-  | { type: 'note'; text: string }
-  | { type: 'clause'; code: string; title: string; blocks: Block[] }
-  | { type: 'signature'; lines: string[] };
+/** Document blocks are defined in @lokus/shared so the web app can render sections it receives from the API. */
+export type Block = ContentBlock;
 
 export interface DocumentSection {
   id: string; // stable within the document, e.g. "4"

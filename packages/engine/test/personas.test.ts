@@ -15,7 +15,8 @@ const OUTCOME: Record<string, Outcome> = {
 const pkg = defaultScoringPackage();
 
 describe('workbook outcome formula (rating-level layer)', () => {
-  it.each(wb.regression_personas.map((r: any) => [r.Persona, r]))('%s', (_name, row: any) => {
+  const rows: [string, any][] = wb.regression_personas.map((r: any) => [r.Persona, r]);
+  it.each(rows)('%s', (_name, row) => {
     const finished = row.Finished === 1;
     const task = (t: 'T1' | 'T2'): TaskScore => {
       const ids = RUBRIC_V1_1.criteria.filter((c) => c.task === t);

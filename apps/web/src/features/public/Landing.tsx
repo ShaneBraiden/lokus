@@ -1,0 +1,172 @@
+import { ArrowRight, ClipboardList, FileSearch, Lock, Mail, Scale, ShieldCheck, Timer, UserRound, Users } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router';
+import workplace from '@/assets/images/workplace.webp';
+import { Button } from '@/ui/Button';
+
+function Feature({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-4">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent [&_svg]:size-5">{icon}</div>
+      <div>
+        <h3 className="font-semibold text-ink">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+const STEPS = [
+  { n: '01', title: 'Invite or sign up', body: 'Employers invite candidates by email. Candidates can also create an account and take the simulation on their own.' },
+  { n: '02', title: 'Work two realistic days', body: 'In the browser, candidates review case report forms and study documents, then handle a difficult sponsor request — saving as they go.' },
+  { n: '03', title: 'Scored, then reviewed', body: 'Recorded actions are scored against a published rubric. Trained assessors rate the written work before any result is released.' },
+];
+
+// Public, candidate-readable descriptions: deliberately general so they never hint at what the simulation contains.
+const COMPETENCIES = [
+  ['Safety awareness', 'Recognising when something could affect the people taking part in a study, and acting on it.'],
+  ['Integrity', 'Doing the right thing for the study and its participants, even when it is inconvenient.'],
+  ['Data quality', 'Careful, well-documented review of study records against the study documents.'],
+  ['Professional communication', 'Clear, neutral and courteous writing with colleagues, sites and sponsors.'],
+];
+
+export function Landing() {
+  return (
+    <>
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:pt-20">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent">Work-simulation assessments for clinical research</p>
+          <h1 className="mt-4 text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl">See how candidates actually work — before you hire them.</h1>
+          <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-ink-2">
+            Lokus places candidates in a realistic Clinical Trial Associate role for two workdays. Every action is recorded, scored against a published rubric and checked by trained assessors.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link to="/signup">
+                Create a candidate account <ArrowRight />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <a href="#employers">I&rsquo;m hiring</a>
+            </Button>
+          </div>
+          <p className="mt-6 flex items-center gap-2 text-sm text-muted">
+            <Lock className="size-4" aria-hidden /> Candidates decide who sees their results.
+          </p>
+        </div>
+        <div className="relative">
+          <img src={workplace} alt="A clinical operations office with people working at their desks" className="aspect-[4/3] w-full rounded-2xl object-cover shadow-pop" />
+          <div className="absolute -bottom-5 left-4 right-4 grid grid-cols-3 gap-2 rounded-xl border border-line bg-surface/95 p-3 text-center shadow-pop backdrop-blur sm:left-8 sm:right-8">
+            {[
+              ['2', 'simulated workdays'],
+              ['12', 'participant records'],
+              ['0', 'AI in scoring'],
+            ].map(([v, l]) => (
+              <div key={l}>
+                <p className="text-xl font-semibold text-ink tabular">{v}</p>
+                <p className="text-[11px] leading-tight text-muted">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-line bg-surface">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-ink">How it works</h2>
+          <ol className="mt-8 grid gap-6 md:grid-cols-3">
+            {STEPS.map((s) => (
+              <li key={s.n} className="rounded-xl border border-line bg-canvas p-6">
+                <p className="font-serif text-2xl text-copper">{s.n}</p>
+                <h3 className="mt-3 font-semibold text-ink">{s.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="employers" className="mx-auto grid max-w-6xl scroll-mt-20 gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-accent">For employers</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-ink">Hiring decisions you can explain.</h2>
+          <p className="mt-4 text-ink-2">Each result shows the outcome, a score for each workday, the competencies behind it and links to the candidate&rsquo;s actual work — so you can see why two candidates differ.</p>
+          <Button asChild className="mt-8" size="lg">
+            <a href="mailto:hello@lokus.example?subject=Lokus%20access">
+              <Mail /> Request employer access
+            </a>
+          </Button>
+        </div>
+        <div className="grid gap-7">
+          <Feature icon={<FileSearch />} title="Evidence you can inspect">
+            Every score links back to what the candidate did: their findings, escalations, replies and records.
+          </Feature>
+          <Feature icon={<Scale />} title="Consistent and fair">
+            Every candidate gets the same workdays and the same rubric. Automated criteria are deterministic; written work is rated by trained assessors.
+          </Feature>
+          <Feature icon={<ShieldCheck />} title="Integrity built in">
+            Critical failures are flagged on their own, whatever the overall score — a strong average never hides them.
+          </Feature>
+          <Feature icon={<Users />} title="Your team, your candidates">
+            Invite candidates individually or in bulk, follow their progress and compare results side by side.
+          </Feature>
+        </div>
+      </section>
+
+      <section id="candidates" className="scroll-mt-20 border-y border-line bg-surface">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2">
+          <div className="lg:order-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-accent">For candidates</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-ink">Show the work, not just the CV.</h2>
+            <p className="mt-4 text-ink-2">Step into a Clinical Trial Associate role at a fictional CRO. There are no trick questions — just the kind of work the job involves.</p>
+            <Button asChild className="mt-8" size="lg">
+              <Link to="/signup">
+                Create your account <ArrowRight />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-7 lg:order-1">
+            <Feature icon={<Timer />} title="At your own pace">
+              Workday 1 takes about an hour; Workday 2 about thirty minutes. Your progress is saved, so you can take a break between them.
+            </Feature>
+            <Feature icon={<UserRound />} title="You control your result">
+              Invited by an employer? They see your result for that invitation. Otherwise it stays private unless you choose to join the talent pool.
+            </Feature>
+            <Feature icon={<ClipboardList />} title="Everything you need is inside">
+              The protocol, the data dictionary, the consent form and your team&rsquo;s inbox are all part of the simulation.
+            </Feature>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-ink">What the Clinical Trial Associate simulation looks at</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          {COMPETENCIES.map(([title, body]) => (
+            <div key={title} className="rounded-xl border border-line bg-surface p-6">
+              <h3 className="font-semibold text-ink">{title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-4 pb-20 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-2xl bg-ink px-8 py-10 text-white sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Ready to see the work?</h2>
+            <p className="mt-1.5 text-white/75">Create an account in a minute, or talk to us about hiring with Lokus.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link to="/signup">Create account</Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+              <a href="mailto:hello@lokus.example?subject=Lokus%20access">Contact us</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}

@@ -16,3 +16,4 @@ export { ScenarioBuilder, actionToDrafts, type FindingInput, type ScenarioAction
 export { PERSONAS, scriptWorkday1, scriptWorkday2, type Persona, type PersonaExpectation, type T1Script, type T2Script } from './personas';
 export { canonicalJson, sha256Hex } from './digest';
 export { normalizeText, containsAny, matchedTokens, findPhrases, affirmedPhrases } from './text';
+export { runRegressionSuite, personaExpectation, type RegressionCase, type RegressionReport } from './regression';
