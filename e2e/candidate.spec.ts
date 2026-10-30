@@ -20,7 +20,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   await page.getByRole('button', { name: 'Start Workday 1' }).click();
   await expect(page.getByText('Section 4 was already approved')).toBeVisible();
   await page.getByRole('button', { name: 'Open the review workspace' }).click();
-  await page.getByRole('button', { name: 'Got it' }).click();
+  await page.getByRole('button', { name: 'I’ll explore myself' }).click();
 
   // A finding on the first record from a cell's menu: only the clicked location is prefilled.
   await page.getByRole('button', { name: /^Weight \(kg\), Week 8/ }).click();
@@ -61,6 +61,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   // Workday 2: the server clock starts when the sponsor's email is opened.
   await page.getByRole('button', { name: 'Continue to Workday 2' }).click();
   await page.getByRole('button', { name: 'Start Workday 2' }).click();
+  await page.getByRole('button', { name: 'I’ll explore myself' }).click();
   await expect(page.getByRole('timer')).toHaveCount(0);
   await page.getByRole('button', { name: /Vikram Rao/ }).click();
   await expect(page.getByRole('timer')).toContainText('left');

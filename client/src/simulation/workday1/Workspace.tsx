@@ -6,7 +6,9 @@ import { PARTICIPANT_IDS, type FindingDTO } from '@lokus/shared';
 import { errorMessage, http } from '@/lib/api';
 import { Alert, Button, Sheet, Skeleton, Spinner, useToast } from '@/ui';
 import { base, useBriefing, useCrf, useDocuments } from '../api';
-import { usePlayer, useRememberScreen, useSeenFlag } from '../PlayerContext';
+import { FieldGuide } from '../guide/FieldGuide';
+import { WORKDAY1_TOUR } from '../guide/tours';
+import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { DocumentViewer, type DocLocation } from '../shared/DocumentViewer';
 import { MailView } from '../shared/MailView';
 import { screenPath } from '../SimulationShell';
@@ -28,24 +30,6 @@ function BriefingSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o
       {briefing.error && <Alert tone="danger">{errorMessage(briefing.error)}</Alert>}
       {briefing.data && <MailView message={briefing.data} />}
     </Sheet>
-  );
-}
-
-function HelpStrip() {
-  const [seen, markSeen] = useSeenFlag('w1-help');
-  if (seen) return null;
-  return (
-    <Alert
-      tone="neutral"
-      title="How the workspace works"
-      action={
-        <Button size="sm" variant="secondary" onClick={markSeen}>
-          Got it
-        </Button>
-      }
-    >
-      Each record is the printed CRF page on your desk. Select any value on it to point the finding form on the right at that value, edit it or recommend a correction. Record-level actions sit above the page, and the study documents open from the toolbar. You can submit once every participant has a finding or &ldquo;No deviation&rdquo; recorded.
-    </Alert>
   );
 }
 
@@ -145,11 +129,12 @@ export function Workspace() {
               <div className="h-full rounded-full bg-ink transition-[width]" style={{ width: `${(reviewed / PARTICIPANT_IDS.length) * 100}%` }} />
             </div>
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="ml-auto flex flex-wrap items-center gap-1.5" data-guide="w1-toolbar">
+            <FieldGuide tour={WORKDAY1_TOUR} />
             <Button variant="ghost" size="sm" onClick={() => setModal({ kind: 'briefing' })}>
               <Mail /> Briefing
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setModal({ kind: 'documents' })}>
+            <Button variant="ghost" size="sm" data-guide="w1-docs" onClick={() => setModal({ kind: 'documents' })}>
               <BookOpen /> Study documents
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setModal({ kind: 'log' })}>
@@ -158,7 +143,7 @@ export function Workspace() {
             <Button variant="ghost" size="sm" onClick={() => setModal({ kind: 'note' })}>
               <MessageSquare /> Message Dr. Anjali
             </Button>
-            <Button size="sm" onClick={() => navigate(screenPath(attemptId, 'review'))}>
+            <Button size="sm" data-guide="w1-submit" onClick={() => navigate(screenPath(attemptId, 'review'))}>
               Review &amp; submit <ArrowRight />
             </Button>
           </div>
@@ -167,8 +152,6 @@ export function Workspace() {
 
       <div className="grid flex-1 items-start gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <main className="flex min-w-0 flex-col gap-4">
-          <HelpStrip />
-
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="icon" className="size-8" disabled={index <= 0} onClick={() => select(PARTICIPANT_IDS[index - 1])} aria-label="Previous record">
@@ -179,7 +162,7 @@ export function Workspace() {
               </Button>
               <h2 className="ml-1 text-base font-semibold text-ink">{selected}</h2>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5" data-guide="w1-record-actions">
               <Button variant="secondary" size="sm" onClick={() => pointForm(recordPreset(selected))}>
                 <FilePen /> Log finding
               </Button>
@@ -202,7 +185,7 @@ export function Workspace() {
 
           <div>
             <ParticipantList participants={state.t1.participants} selected={selected} onSelect={select} />
-            <div className="desk-surface mt-3 rounded-xl border border-[#d3cbbf] px-3 py-6 shadow-[inset_0_2px_10px_rgb(60_45_30/0.12)] sm:px-6 sm:py-9 md:mt-0 md:rounded-tl-none">
+            <div data-guide="w1-crf" className="desk-surface mt-3 rounded-xl border border-[#d3cbbf] px-3 py-6 shadow-[inset_0_2px_10px_rgb(60_45_30/0.12)] sm:px-6 sm:py-9 md:mt-0 md:rounded-tl-none">
               {crf.isLoading && <Skeleton className="mx-auto h-[640px] max-w-[1000px] rounded-[2px]" />}
               {crf.error && <Alert tone="danger">{errorMessage(crf.error)}</Alert>}
               {crf.data && crf.data.id === selected && (
@@ -213,12 +196,16 @@ export function Workspace() {
         </main>
 
         <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-[7.75rem] xl:max-h-[calc(100dvh-8.5rem)] xl:overflow-y-auto xl:pb-2 xl:pr-1">
-          {entry.mode === 'create' ? (
-            <FindingForm key={`new|${selected}|${formRun}`} variant="inline" mode="create" preset={entry.preset} presetKey={entry.key} restoreDraft={restoreDraft} onClose={() => resetEntry()} />
-          ) : (
-            <FindingForm key={`edit|${entry.finding.id}|${formRun}`} variant="inline" mode="edit" finding={entry.finding} onClose={() => resetEntry()} />
-          )}
-          <RecordPanel participantId={selected} state={state} docs={docs.data} editedCells={crf.data?.id === selected ? crf.data.edits : []} onEdit={editFinding} onWithdraw={withdrawFinding} onRestore={(c) => restore.mutate(c)} />
+          <div data-guide="w1-form">
+            {entry.mode === 'create' ? (
+              <FindingForm key={`new|${selected}|${formRun}`} variant="inline" mode="create" preset={entry.preset} presetKey={entry.key} restoreDraft={restoreDraft} onClose={() => resetEntry()} />
+            ) : (
+              <FindingForm key={`edit|${entry.finding.id}|${formRun}`} variant="inline" mode="edit" finding={entry.finding} onClose={() => resetEntry()} />
+            )}
+          </div>
+          <div data-guide="w1-panel">
+            <RecordPanel participantId={selected} state={state} docs={docs.data} editedCells={crf.data?.id === selected ? crf.data.edits : []} onEdit={editFinding} onWithdraw={withdrawFinding} onRestore={(c) => restore.mutate(c)} />
+          </div>
         </aside>
       </div>
 

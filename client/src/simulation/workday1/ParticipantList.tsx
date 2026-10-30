@@ -15,7 +15,7 @@ function statusText(p: ParticipantSummaryDTO) {
 export function ParticipantList({ participants, selected, onSelect }: { participants: ParticipantSummaryDTO[]; selected: string | null; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="md:hidden">
+      <div className="md:hidden" data-guide="w1-records">
         <label htmlFor="record-select" className="sr-only">
           Participant record
         </label>
@@ -30,7 +30,7 @@ export function ParticipantList({ participants, selected, onSelect }: { particip
           ))}
         </Select>
       </div>
-      <nav aria-label="Participant records" className="hidden md:block">
+      <nav aria-label="Participant records" className="hidden md:block" data-guide="w1-records">
         <ol className="flex items-end gap-1 overflow-x-auto px-3 pt-2 [scrollbar-width:thin]">
           {participants.map((p) => {
             const active = p.id === selected;

@@ -8,6 +8,8 @@ import { formatTime } from '@/lib/format';
 import { Alert, Button, Card, Dialog, EmptyState, Skeleton, cn } from '@/ui';
 import { base, simKeys, useEmail, useInbox } from '../api';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
+import { FieldGuide } from '../guide/FieldGuide';
+import { WORKDAY2_TOUR } from '../guide/tours';
 import { DocumentViewer, type DocLocation } from '../shared/DocumentViewer';
 import { MailView } from '../shared/MailView';
 import { recipientNames } from '../shared/RecipientPicker';
@@ -165,18 +167,21 @@ export function MailWorkspace() {
 
       <div className="sticky top-14 z-30 border-b border-line bg-surface">
         <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 sm:px-6">
-          <Button size="sm" variant="secondary" onClick={() => setCompose({ kind: 'new' })}>
+          <Button size="sm" variant="secondary" data-guide="w2-compose" onClick={() => setCompose({ kind: 'new' })}>
             <PencilLine /> New message
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setDocsOpen(true)}>
             <BookOpen /> Study documents
           </Button>
-          <Button size="sm" variant={recordView ? 'secondary' : 'ghost'} onClick={() => go({ v: 'record' })}>
+          <Button size="sm" variant={recordView ? 'secondary' : 'ghost'} data-guide="w2-record" onClick={() => go({ v: 'record' })}>
             <ClipboardPen /> Issue record
           </Button>
-          <Button size="sm" className="ml-auto" onClick={() => setFinishOpen(true)}>
-            Finish Workday 2
-          </Button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <FieldGuide tour={WORKDAY2_TOUR} />
+            <Button size="sm" data-guide="w2-finish" onClick={() => setFinishOpen(true)}>
+              Finish Workday 2
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -206,7 +211,7 @@ export function MailWorkspace() {
               </button>
             ))}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto" data-guide="w2-inbox">
             {folder === 'inbox' ? (
               inbox.isLoading ? (
                 <div className="flex flex-col gap-2 p-4">
@@ -225,7 +230,7 @@ export function MailWorkspace() {
           </div>
         </Card>
 
-        <section className={cn('min-w-0', !showingDetail && 'hidden lg:block')} aria-label="Reading pane">
+        <section className={cn('min-w-0', !showingDetail && 'hidden lg:block')} aria-label="Reading pane" data-guide="w2-reading">
           {showingDetail && (
             <button type="button" onClick={() => go(folder === 'sent' ? { f: 'sent' } : {})} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink lg:hidden">
               <ArrowLeft className="size-4" /> {folder === 'sent' ? 'Sent' : 'Inbox'}
