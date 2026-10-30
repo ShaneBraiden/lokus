@@ -21,18 +21,39 @@ export interface DbHandle {
   close(): Promise<void>;
 }
 
+export interface OpenOptions {
+  /** Called when an idle pooled connection fails (e.g. the pooler restarts). Without a listener the process would crash. */
+  onError?: (err: Error) => void;
+}
+
 function connectionStringWithoutSslParams(url: string): string {
   const u = new URL(url);
   for (const p of ['sslmode', 'ssl', 'sslrootcert', 'uselibpqcompat']) u.searchParams.delete(p);
   return u.toString();
 }
 
+/** node-postgres settings for DATABASE_URL: TLS per DATABASE_SSL, checked against DATABASE_SSL_CA when one is given. */
+export function pgConnectionConfig(config: Pick<AppConfig, 'databaseUrl' | 'databaseSsl' | 'databaseSslCa'>): pg.ClientConfig {
+  if (!config.databaseUrl) throw new Error('DATABASE_URL is not set');
+  const ssl =
+    config.databaseSsl === 'off'
+      ? undefined
+      : { rejectUnauthorized: config.databaseSsl === 'verify', ...(config.databaseSslCa ? { ca: config.databaseSslCa } : {}) };
+  return { connectionString: connectionStringWithoutSslParams(config.databaseUrl), ssl };
+}
+
 /** Opens PostgreSQL when DATABASE_URL is set (Supabase/production), otherwise embedded PGlite (dev/tests). */
-export async function openDatabase(config: Pick<AppConfig, 'databaseUrl' | 'databaseSsl' | 'pgliteDir'>): Promise<DbHandle> {
+export async function openDatabase(
+  config: Pick<AppConfig, 'databaseUrl' | 'databaseSsl' | 'databaseSslCa' | 'pgliteDir'>,
+  options: OpenOptions = {},
+): Promise<DbHandle> {
   const folder = migrationsFolder();
   if (config.databaseUrl) {
-    const ssl = config.databaseSsl === 'off' ? undefined : { rejectUnauthorized: config.databaseSsl === 'verify' };
-    const pool = new pg.Pool({ connectionString: connectionStringWithoutSslParams(config.databaseUrl), ssl, max: 10 });
+    // In Supabase's session pooler every client connection holds one of the pool's server connections, so keep the
+    // pooler's pool size at 10 or more. Idle connections stay open for a minute because a remote connect costs several
+    // round trips; an unreachable database fails after 10 s instead of hanging requests.
+    const pool = new pg.Pool({ ...pgConnectionConfig(config), max: 10, idleTimeoutMillis: 60_000, connectionTimeoutMillis: 10_000, keepAlive: true });
+    pool.on('error', options.onError ?? ((err) => console.error(`database connection error: ${err.message}`)));
     const db = drizzlePg({ client: pool, schema });
     return {
       db,

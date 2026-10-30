@@ -1,17 +1,51 @@
 # Deploying Lokus (Render + Supabase)
 
-One Render web service runs the API and serves the built client. Postgres is a Supabase project in the same region.
+One Render web service runs the API and serves the built client. Postgres is a Supabase project in a nearby region.
 `render.yaml` in the repository root is the blueprint.
 
 ## 1. Supabase
 
-1. Create a project in **Singapore (ap-southeast-1)**. Note the database password.
-2. Copy the **Session pooler** connection string (Project settings → Database → Connection string → Session pooler,
-   port 5432). Transaction-pooler mode is not supported (the app uses transactions with row locks).
-3. Turn on **Point-in-time recovery** (or at least daily backups) before inviting real candidates.
-4. Nothing else to configure: the app creates its tables on first start. Row-level security is enabled on every table
-   with no policies, so Supabase's public Data API (anon/authenticated keys) returns nothing. Do not add policies.
-   The answer key lives in the separate `confidential` schema.
+1. **Region.** Keep the database close to the app server: every request makes several sequential queries. The
+   project is in **Ireland (eu-west-1)**. Render has no Ireland region, so `render.yaml` uses **Frankfurt**, the
+   closest (roughly 20–25 ms per query round trip). A project created in **Frankfurt (eu-central-1)** would sit next
+   to the service; if candidates are mostly in Asia, put both in Singapore instead. A Supabase project's region cannot
+   be changed after creation, and Render's region is fixed when the service is created.
+2. **Plan.** Use a paid plan for real candidates: free projects are paused after a week of low activity, and daily
+   backups start with the Pro plan. Turn on point-in-time recovery if losing a day of evidence is not acceptable.
+3. **Connection string.** Connect → **Session pooler** (port 5432). Replace `[YOUR-PASSWORD]` with the database
+   password, percent-encoding `@ : / ? # [ ] %` if it contains any. The app refuses to start while the placeholder is
+   still there. Do not use the transaction pooler (port 6543): the app holds row locks inside transactions. The
+   session pooler also works over IPv4; the direct connection needs IPv6 unless you buy Supabase's IPv4 add-on.
+4. **Pool size.** Each app instance opens up to 10 connections, and in session mode each one holds a server
+   connection, so keep the pooler's pool size (Database settings) at 10 or more per instance.
+5. **TLS.** The connection is always encrypted. To verify the server's certificate as well, download Supabase's CA
+   certificate (Database settings → SSL configuration → **Download certificate**) and set its contents as
+   `DATABASE_SSL_CA` on Render. Then switch on **Enforce SSL on incoming connections** in the same section (this
+   restarts the database briefly).
+6. **Data API.** The app never uses Supabase's Data API (REST/GraphQL), so turn it off: Integrations → Data API →
+   **Enable Data API** off. It is closed either way: row-level security is on for every table with no policies, so
+   the anon and authenticated keys see no rows. Do not add policies. The answer key lives in the separate
+   `confidential` schema, which those roles cannot use.
+7. Nothing else to configure: the app creates its tables, seeds the platform and creates the first admin when it
+   starts.
+
+### Checking the database from your machine (optional)
+
+`npm run dev` reads `.env`, so keep the production connection string in a separate, gitignored file such as
+`.env.supabase` (`.gitignore` excludes every `.env.*` except `.env.example`):
+
+```
+DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres
+# DATABASE_SSL_CA=<certificate, multi-line or with \n line breaks>
+```
+
+- `npm run db:check -- --env=.env.supabase` is read-only. It reports the connection and TLS, the pooler mode,
+  migrations, row-level security and policies, the confidential schema's privileges, the platform seed, admin
+  accounts, and any demo (`@lokus.local`) accounts, which must never be there. It exits non-zero when it finds a
+  problem.
+- `npm run db:migrate -- --env=.env.supabase` applies the migrations before the first deploy (the app also applies
+  them at startup).
+- Demo accounts are only seeded into a `DATABASE_URL` when `SEED_DEMO=true` is set; never set it for this database.
 
 ## 2. Resend
 
@@ -27,7 +61,8 @@ One Render web service runs the API and serves the built client. Postgres is a S
 | Variable | Value |
 |---|---|
 | `APP_URL` | The public URL, e.g. `https://lokus.onrender.com` or your domain. Used in email links and the CSRF origin check. |
-| `DATABASE_URL` | The Supabase session-pooler string from step 1. |
+| `DATABASE_URL` | The Supabase session-pooler string from step 1, with the password filled in. |
+| `DATABASE_SSL_CA` | Optional: Supabase's CA certificate (step 1.5). It is not in the blueprint; add it under Environment. |
 | `RESEND_API_KEY` | From step 2. |
 | `EMAIL_FROM` | From step 2. |
 | `SEED_ADMIN_EMAIL` | The first Lokus admin's email. |
@@ -35,8 +70,9 @@ One Render web service runs the API and serves the built client. Postgres is a S
 
 `SESSION_SECRET` is generated by Render. `REQUIRE_STAFF_MFA=true` makes staff set up an authenticator app.
 
-3. Deploy. The service builds the client and the server, runs migrations at startup, seeds the platform (simulation
-   version and the published scoring package, after its regression suite passes) and creates the first admin.
+3. Deploy. The service (in Frankfurt, see step 1.1) builds the client and the server, runs migrations at startup,
+   seeds the platform (simulation version and the published scoring package, after its regression suite passes) and
+   creates the first admin.
 4. Health check: `GET /api/health` returns `{"status":"ok"}`.
 5. Sign in as the admin, set up the authenticator app, then **remove `SEED_ADMIN_PASSWORD`** from Render.
 

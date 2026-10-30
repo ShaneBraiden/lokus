@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate-cli.ts",
     "db:seed": "tsx src/db/seed-cli.ts",
+    "db:check": "tsx src/db/check-cli.ts",
     "e2e:server": "node -e \"require('fs').rmSync('../.data/e2e-pglite',{recursive:true,force:true})\" && tsx src/server.ts --port=4001"
   },
   "dependencies": {

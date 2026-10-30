@@ -18,8 +18,9 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p e2e/tsconfig.json",
     "db:generate": "npm run db:generate -w @lokus/server",
-    "db:migrate": "npm run db:migrate -w @lokus/server",
-    "db:seed": "npm run db:seed -w @lokus/server",
+    "db:migrate": "npm run db:migrate -w @lokus/server --",
+    "db:seed": "npm run db:seed -w @lokus/server --",
+    "db:check": "npm run db:check -w @lokus/server --",
     "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {

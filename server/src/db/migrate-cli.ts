@@ -1,11 +1,8 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { loadConfig } from '../config';
-import { findRepoRoot } from '../lib/paths';
+import { loadEnvFile } from '../lib/env';
 import { openDatabase } from './client';
 
-const envFile = path.join(findRepoRoot(), '.env');
-if (existsSync(envFile)) process.loadEnvFile(envFile);
+loadEnvFile();
 
 const config = loadConfig();
 const handle = await openDatabase(config);

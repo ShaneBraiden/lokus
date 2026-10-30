@@ -1,14 +1,11 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import pino from 'pino';
 import { loadConfig } from '../config';
 import { systemClock } from '../lib/clock';
-import { findRepoRoot } from '../lib/paths';
+import { loadEnvFile } from '../lib/env';
 import { openDatabase } from './client';
 import { seedAdmin, seedDemo, seedPlatform } from './seed';
 
-const envFile = path.join(findRepoRoot(), '.env');
-if (existsSync(envFile)) process.loadEnvFile(envFile);
+loadEnvFile();
 
 const config = loadConfig();
 const log = pino({ level: 'info' });

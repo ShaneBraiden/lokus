@@ -13,8 +13,13 @@ const EnvSchema = z.object({
   APP_URL: z.url().default('http://localhost:5173'),
   /** postgres://… (Supabase session pooler in production). When absent the API uses embedded PGlite. */
   DATABASE_URL: z.string().min(1).optional(),
-  /** TLS for DATABASE_URL: off | no-verify (encrypted, certificate not checked) | verify. Default: no-verify unless localhost. */
+  /**
+   * TLS for DATABASE_URL: off | no-verify (encrypted, certificate not checked) | verify.
+   * Default: verify when DATABASE_SSL_CA is set, otherwise no-verify for remote hosts and off for localhost.
+   */
   DATABASE_SSL: z.enum(['off', 'no-verify', 'verify']).optional(),
+  /** PEM CA certificate that signs the database server's certificate (Supabase: Database settings → SSL configuration). */
+  DATABASE_SSL_CA: z.string().optional(),
   /** PGlite data directory for local development (relative paths resolve from the repo root). */
   PGLITE_DIR: z.string().default('.data/pglite'),
   SESSION_SECRET: z.string().min(32).optional(),
@@ -36,6 +41,7 @@ export interface AppConfig {
   appUrl: string;
   databaseUrl: string | null;
   databaseSsl: 'off' | 'no-verify' | 'verify';
+  databaseSslCa: string | null;
   pgliteDir: string | null;
   sessionSecret: string;
   resendApiKey: string | null;
@@ -57,13 +63,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const production = e.NODE_ENV === 'production';
   if (production && !e.SESSION_SECRET) throw new Error('SESSION_SECRET (at least 32 characters) is required in production');
   if (production && !e.DATABASE_URL) throw new Error('DATABASE_URL is required in production');
+  // Supabase shows the connection string with a placeholder; fail clearly instead of attempting a login with it.
+  if (e.DATABASE_URL && /\[YOUR-PASSWORD\]|%5BYOUR-PASSWORD%5D/i.test(e.DATABASE_URL)) {
+    throw new Error('DATABASE_URL still contains the [YOUR-PASSWORD] placeholder');
+  }
+  // Single-line env editors flatten PEM files, so literal "\n" sequences are accepted as line breaks.
+  const databaseSslCa = e.DATABASE_SSL_CA ? e.DATABASE_SSL_CA.replace(/\\n/g, '\n').trim() : null;
+  if (databaseSslCa && !databaseSslCa.includes('-----BEGIN CERTIFICATE-----')) {
+    throw new Error('DATABASE_SSL_CA must be a PEM certificate (-----BEGIN CERTIFICATE----- …)');
+  }
+  const remoteDatabase = !!e.DATABASE_URL && !/@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(e.DATABASE_URL);
   const root = findRepoRoot();
   return {
     env: e.NODE_ENV,
     port: e.PORT,
     appUrl: e.APP_URL.replace(/\/$/, ''),
     databaseUrl: e.DATABASE_URL ?? null,
-    databaseSsl: e.DATABASE_SSL ?? (e.DATABASE_URL && !/@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(e.DATABASE_URL) ? 'no-verify' : 'off'),
+    databaseSsl: e.DATABASE_SSL ?? (databaseSslCa ? 'verify' : remoteDatabase ? 'no-verify' : 'off'),
+    databaseSslCa,
     pgliteDir: e.DATABASE_URL ? null : path.resolve(root, e.PGLITE_DIR),
     sessionSecret: e.SESSION_SECRET ?? DEV_SECRET,
     resendApiKey: e.RESEND_API_KEY ?? null,
@@ -73,7 +90,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'client/dist'),
     seedAdminEmail: e.SEED_ADMIN_EMAIL ?? null,
     seedAdminPassword: e.SEED_ADMIN_PASSWORD ?? null,
-    seedDemo: e.SEED_DEMO ?? e.NODE_ENV === 'development',
+    // Demo accounts share a published password, so by default they only go into the local embedded database.
+    seedDemo: e.SEED_DEMO ?? (e.NODE_ENV === 'development' && !e.DATABASE_URL),
     logLevel: e.LOG_LEVEL ?? (e.NODE_ENV === 'test' ? 'silent' : 'info'),
     secureCookies: production,
   };

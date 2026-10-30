@@ -1,16 +1,13 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
 import pino from 'pino';
 import { createApp } from './app';
 import { loadConfig } from './config';
 import { openDatabase } from './db/client';
 import { seedAdmin, seedDemo, seedPlatform } from './db/seed';
 import { systemClock } from './lib/clock';
+import { loadEnvFile } from './lib/env';
 import { ConsoleMailer, ResendMailer } from './lib/mailer';
-import { findRepoRoot } from './lib/paths';
 
-const envFile = path.join(findRepoRoot(), '.env');
-if (existsSync(envFile)) process.loadEnvFile(envFile);
+loadEnvFile();
 
 // `--port=N` (used by `npm run dev`) wins over PORT, which dev tooling may set for the web server it launches.
 const portArg = process.argv.find((a) => a.startsWith('--port='));
@@ -18,7 +15,7 @@ const config = loadConfig(portArg ? { ...process.env, PORT: portArg.slice('--por
 const log = pino({ level: config.logLevel });
 
 async function main() {
-  const handle = await openDatabase(config);
+  const handle = await openDatabase(config, { onError: (err) => log.error({ err }, 'idle database connection failed') });
   await handle.migrate();
   const deps = {
     config,

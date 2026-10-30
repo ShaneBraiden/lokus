@@ -1,10 +1,10 @@
-# Render Blueprint — one Node web service that serves the API and the built client (Singapore, next to the
-# Supabase database). Migrations run at startup. See docs/DEPLOYMENT.md for the full checklist.
+# Render Blueprint — one Node web service that serves the API and the built client. Frankfurt is the closest Render
+# region to the Supabase project (Ireland, eu-west-1). Migrations run at startup. See docs/DEPLOYMENT.md.
 services:
   - type: web
     name: lokus
     runtime: node
-    region: singapore
+    region: frankfurt
     # Starter, not Free: free instances sleep and would cold-start in the middle of a candidate's assessment.
     plan: starter
     # Dev dependencies (Vite, TypeScript, esbuild) are needed to build even though NODE_ENV is production.
@@ -20,11 +20,10 @@ services:
       # Public URL, e.g. https://lokus.onrender.com or your custom domain (email links + CSRF origin check).
       - key: APP_URL
         sync: false
-      # Supabase "Session pooler" connection string for the Singapore project.
+      # Supabase "Session pooler" connection string (port 5432) with the password filled in. Always encrypted; add
+      # DATABASE_SSL_CA (Supabase's CA certificate) in the dashboard to verify the server's certificate as well.
       - key: DATABASE_URL
         sync: false
-      - key: DATABASE_SSL
-        value: no-verify
       - key: SESSION_SECRET
         generateValue: true
       - key: TRUST_PROXY
