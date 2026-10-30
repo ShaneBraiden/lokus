@@ -16,6 +16,8 @@ export interface AttemptContext {
   attempt: AttemptRow;
   simulationTitle: string;
   orgName: string | null;
+  /** The inviting employer requires the lockdown (proctored) mode. */
+  lockdown: boolean;
 }
 
 declare global {
@@ -79,14 +81,14 @@ export function loadOwnAttempt(deps: Pick<AppDeps, 'db' | 'clock'>): RequestHand
     const parsed = z.object({ attemptId: z.uuid() }).safeParse(req.params);
     if (!parsed.success) throw notFound('Assessment not found.');
     const [row] = await deps.db
-      .select({ a: attempts, simTitle: simulationVersions.title, orgName: organizations.name })
+      .select({ a: attempts, simTitle: simulationVersions.title, orgName: organizations.name, lockdown: invitations.lockdown })
       .from(attempts)
       .innerJoin(simulationVersions, eq(simulationVersions.id, attempts.simulationVersionId))
       .leftJoin(invitations, eq(invitations.id, attempts.invitationId))
       .leftJoin(organizations, eq(organizations.id, invitations.orgId))
       .where(and(eq(attempts.id, parsed.data.attemptId), eq(attempts.candidateId, req.auth!.user.id)));
     if (!row) throw notFound('Assessment not found.');
-    req.attemptCtx = { attempt: await expireIfDue(deps, row.a), simulationTitle: row.simTitle, orgName: row.orgName ?? null };
+    req.attemptCtx = { attempt: await expireIfDue(deps, row.a), simulationTitle: row.simTitle, orgName: row.orgName ?? null, lockdown: row.lockdown ?? false };
     next();
   };
 }

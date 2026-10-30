@@ -7,6 +7,7 @@ import { Alert, Button } from '@/ui';
 import { CompletionScene, InboxScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
+import { LockdownNotice, enterFullscreen } from '../Lockdown';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { screenPath } from '../SimulationShell';
 
@@ -42,10 +43,15 @@ export function Workday1Complete() {
 /** Workday 2 introduction. Neutral: it says how the day works, not what to look for. */
 export function Workday2Intro() {
   useRememberScreen('workday-2');
-  const { attemptId, refresh } = usePlayer();
+  const { attemptId, refresh, state } = usePlayer();
+  const lockdown = state.attempt.lockdown;
   const navigate = useNavigate();
   const start = useMutation({
-    mutationFn: () => http.post(`${base(attemptId)}/tasks/T2/start`),
+    // Proctored: fullscreen is entered from this click, before the workday starts.
+    mutationFn: async () => {
+      if (lockdown.required) await enterFullscreen();
+      return http.post(`${base(attemptId)}/tasks/T2/start`);
+    },
     onSuccess: async () => {
       await refresh();
       navigate(screenPath(attemptId, 'inbox'), { replace: true });
@@ -63,6 +69,7 @@ export function Workday2Intro() {
       }
     >
       {start.error && <Alert tone="danger">{errorMessage(start.error)}</Alert>}
+      {lockdown.required && <LockdownNotice limit={lockdown.limit} />}
       <p>It is just after 08:00. Work through your inbox as you would on a normal day: read what has come in, respond where you need to, and keep the study record up to date.</p>
       <p>Plan for about 30 minutes. A countdown appears once your time starts. It is a guide: nothing is sent or submitted automatically.</p>
       <p>When you have finished, choose <span className="font-medium text-ink">Finish Workday 2</span>.</p>

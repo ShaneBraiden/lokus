@@ -123,6 +123,17 @@ export const telemetrySchema = z.object({
   metadata: z.record(z.string().max(40), z.union([z.string().max(200), z.number(), z.boolean()])).default({}),
 });
 
+/** Lockdown (employer-required proctoring). Strikes are the candidate leaving the assessment; blocked actions never leave it. */
+export const LOCKDOWN_STRIKES = ['tab_hidden', 'window_blur', 'fullscreen_exit', 'devtools', 'multiple_screens', 'second_tab', 'screen_capture'] as const;
+export const LOCKDOWN_BLOCKED = ['copy', 'cut', 'paste', 'context_menu', 'shortcut', 'print', 'drop'] as const;
+export type LockdownViolationKind = (typeof LOCKDOWN_STRIKES)[number] | (typeof LOCKDOWN_BLOCKED)[number];
+/** At this many strikes the attempt is closed. */
+export const LOCKDOWN_STRIKE_LIMIT = 3;
+export const lockdownViolationSchema = z.object({
+  kind: z.enum([...LOCKDOWN_STRIKES, ...LOCKDOWN_BLOCKED]),
+  detail: z.string().trim().max(200).default(''),
+});
+
 export const reflectionSchema = z.object({ text: z.string().trim().max(4000) });
 
 export const progressSchema = z.object({
