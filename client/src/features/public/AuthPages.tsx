@@ -33,8 +33,8 @@ export function SignIn() {
   const { errors } = form.formState;
   return (
     <AuthLayout
-      title="Sign in"
-      subtitle="Welcome back to Lokus."
+      title="Sign in to Lokus"
+      subtitle="Enter your email and password to continue."
       footer={
         <>
           New candidate?{' '}
