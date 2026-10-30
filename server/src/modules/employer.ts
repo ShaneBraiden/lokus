@@ -2,12 +2,13 @@ import { Router, type Request } from 'express';
 import { and, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AssessmentResult } from '#engine';
-import { ATTEMPT_STATUS_LABELS, type AttemptStatus } from '@lokus/shared';
+import { ATTEMPT_STATUS_LABELS, LOCKDOWN_STRIKE_LIMIT, type AttemptStatus } from '@lokus/shared';
 import type { AppDeps } from '../context';
 import { assessmentResults, attempts, candidateProfiles, invitations, resultShares, shareRequests, users } from '../db/schema';
 import { audit } from '../lib/audit';
 import { notFound } from '../lib/errors';
 import { parseParams, parseQuery } from '../lib/http';
+import { listEvents } from '../services/eventStore';
 import { buildEmployerReport, employerResult, type EmployerResult } from '../services/employerReport';
 import { latestVersions } from '../services/scoring';
 import { loadScoringPackage } from '../services/scoringPackages';
@@ -136,6 +137,19 @@ export function employerRouter(deps: AppDeps): Router {
     return row;
   }
 
+  /** Lockdown record for a proctored attempt: every violation the player reported, and whether it was a strike. */
+  async function integrity(a: typeof attempts.$inferSelect) {
+    const [inv] = a.invitationId ? await deps.db.select({ lockdown: invitations.lockdown }).from(invitations).where(eq(invitations.id, a.invitationId)) : [];
+    if (!inv?.lockdown) return { lockdown: false, strikes: 0, limit: LOCKDOWN_STRIKE_LIMIT, closed_by_lockdown: false, violations: [] };
+    const violations = (await listEvents(deps.db, a.id))
+      .filter((r) => r.eventType === 'lockdown_violation')
+      .map((r) => {
+        const m = r.metadata as { kind: string; detail?: string; strike?: boolean };
+        return { kind: m.kind, detail: m.detail ?? '', strike: Boolean(m.strike), at: r.serverTs };
+      });
+    return { lockdown: true, strikes: violations.filter((v) => v.strike).length, limit: LOCKDOWN_STRIKE_LIMIT, closed_by_lockdown: a.closeReason === 'lockdown', violations };
+  }
+
   async function report(row: Awaited<ReturnType<typeof sharedAttempt>>) {
     const { result, evidence } = await buildEmployerReport(deps, row.a);
     const showResult = row.a.status === 'submitted' || row.a.status === 'closed';
@@ -153,6 +167,7 @@ export function employerRouter(deps: AppDeps): Router {
       },
       result: showResult ? result : null,
       evidence: showResult ? evidence : null,
+      integrity: await integrity(row.a),
     };
   }
 

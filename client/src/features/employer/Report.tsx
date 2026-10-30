@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Hourglass, Mail, MapPin, Search } from 'lucide-react';
+import { ArrowLeft, Download, Hourglass, Mail, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { errorMessage } from '@/lib/api';
@@ -8,7 +8,59 @@ import { Stagger, StaggerItem } from '@/ui/motion';
 import { CompetencyBars, GateFlags, ScoreMeter } from '@/features/results/Charts';
 import { EvidencePanel, type EvidenceTarget } from '@/features/results/EvidencePanel';
 import { OutcomeBadge, OutcomeBanner } from '@/features/results/Outcome';
-import { usePool, useReport } from './api';
+import { usePool, useReport, type LockdownIntegrity } from './api';
+
+const VIOLATION_LABELS: Record<string, string> = {
+  tab_hidden: 'Switched tab or app',
+  window_blur: 'Left the assessment window',
+  fullscreen_exit: 'Exited fullscreen',
+  devtools: 'Opened developer tools',
+  multiple_screens: 'Second screen connected',
+  second_tab: 'Opened in a second tab',
+  screen_capture: 'Screen capture attempted',
+  copy: 'Copy blocked',
+  cut: 'Cut blocked',
+  paste: 'Paste blocked',
+  context_menu: 'Right-click blocked',
+  shortcut: 'Shortcut blocked',
+  print: 'Print blocked',
+  drop: 'Drag and drop blocked',
+};
+
+function IntegrityCard({ integrity }: { integrity: LockdownIntegrity }) {
+  if (!integrity.lockdown) return null;
+  const blocked = integrity.violations.length - integrity.strikes;
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <ShieldCheck className="size-4 text-accent" /> Lockdown record
+          </span>
+        }
+        description={`${integrity.strikes} of ${integrity.limit} strikes · ${blocked} blocked action${blocked === 1 ? '' : 's'}${integrity.closed_by_lockdown ? ' · closed at the strike limit' : ''}`}
+      />
+      <CardBody>
+        {integrity.violations.length === 0 ? (
+          <p className="text-sm text-muted">No violations recorded.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-line text-sm">
+            {integrity.violations.map((v, i) => (
+              <li key={i} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="flex items-center gap-2">
+                  {v.strike ? <Badge tone="danger">Strike</Badge> : <Badge>Blocked</Badge>}
+                  <span className="text-ink">{VIOLATION_LABELS[v.kind] ?? v.kind}</span>
+                  {v.detail && <span className="text-muted">· {v.detail}</span>}
+                </span>
+                <span className="whitespace-nowrap text-xs text-muted">{formatDateTime(v.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
 
 const EVIDENCE_TAB: Record<string, EvidenceTarget['tab']> = { 'evidence-safety': 'w1', 'evidence-decisions': 'w2', 'evidence-reply': 'w2' };
 
@@ -17,7 +69,7 @@ function ReportView({ id, pool }: { id: string; pool: boolean }) {
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
   if (q.isLoading) return <PageLoader />;
   if (q.error || !q.data) return <Alert tone="danger">{errorMessage(q.error)}</Alert>;
-  const { candidate, attempt, result, evidence } = q.data;
+  const { candidate, attempt, result, evidence, integrity } = q.data;
   return (
     <div className="flex flex-col gap-6">
       <Link to={pool ? '/org/talent-pool' : '/org/candidates'} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
@@ -51,6 +103,7 @@ function ReportView({ id, pool }: { id: string; pool: boolean }) {
         }
       />
       {pool && <Alert tone="info">This candidate took the simulation on their own and chose to be found. Your view is recorded; contact them by email if you would like to talk.</Alert>}
+      {integrity && <IntegrityCard integrity={integrity} />}
       {!result || !evidence ? (
         <Card>
           <EmptyState icon={<Hourglass />} title={attempt.in_progress ? 'Assessment in progress' : attempt.status_label}>

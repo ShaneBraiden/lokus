@@ -290,6 +290,8 @@ export const invitations = pgTable(
     status: text('status').notNull().default('pending'),
     expiresAt: ts('expires_at').notNull(),
     deadlineAt: ts('deadline_at'),
+    /** Employer-required proctoring: fullscreen lockdown with violation tracking, closed at the violation limit. */
+    lockdown: boolean('lockdown').notNull().default(false),
     invitedBy: uuid('invited_by').references(() => users.id),
     acceptedBy: uuid('accepted_by').references(() => users.id),
     attemptId: uuid('attempt_id'),

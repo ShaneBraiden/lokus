@@ -7,6 +7,7 @@ import { RequireRole } from '@/lib/auth';
 import { Alert, Button, PageLoader } from '@/ui';
 import { base, useAttemptState } from './api';
 import { Brand } from './layout/SimHeader';
+import { LockdownGuard } from './Lockdown';
 import { PlayerProvider, usePlayer } from './PlayerContext';
 
 /** The screens of each phase, first one being where the phase begins. The server's phase decides what is reachable. */
@@ -76,11 +77,17 @@ function useInterruptionTelemetry(attemptId: string, active: boolean) {
 }
 
 function Gate() {
-  const { attemptId, phase } = usePlayer();
+  const { attemptId, phase, state } = usePlayer();
   const matches = useMatches();
   const handle = matches[matches.length - 1]?.handle as ScreenHandle | undefined;
   useInterruptionTelemetry(attemptId, phase === 'workday1' || phase === 'workday2');
   if (handle && !handle.phases.includes(phase)) return <PhaseRedirect />;
+  if (state.attempt.lockdown.required && (phase === 'workday1' || phase === 'workday2'))
+    return (
+      <LockdownGuard key={phase}>
+        <Outlet />
+      </LockdownGuard>
+    );
   return <Outlet />;
 }
 

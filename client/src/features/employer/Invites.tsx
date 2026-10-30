@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileUp, Mail, RotateCw, Send, X } from 'lucide-react';
+import { FileUp, Mail, RotateCw, Send, ShieldCheck, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { errorMessage, http } from '@/lib/api';
 import { useMe } from '@/lib/auth';
 import { formatDate, formatDateTime } from '@/lib/format';
-import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, PageLoader, Table, Tabs, TabsContent, TabsList, TabsTrigger, TD, TH, THead, TR, Textarea, useToast } from '@/ui';
+import { Alert, Badge, Button, Card, CardBody, CardHeader, Checkbox, EmptyState, Field, Input, PageHeader, PageLoader, Table, Tabs, TabsContent, TabsList, TabsTrigger, TD, TH, THead, TR, Textarea, useToast } from '@/ui';
 import { orgKeys, useInvitations } from './api';
 
 interface InviteResult {
@@ -48,11 +48,12 @@ function InviteForm() {
   const [email, setEmail] = useState('');
   const [bulk, setBulk] = useState('');
   const [days, setDays] = useState('');
+  const [lockdown, setLockdown] = useState(false);
   const [results, setResults] = useState<InviteResult[] | null>(null);
   const parsed = parseCandidateList(bulk);
   const send = useMutation({
     mutationFn: (candidates: { name: string; email: string }[]) =>
-      http.post<{ results: InviteResult[]; default_password?: string }>('/org/invitations', { candidates, ...(days ? { deadline_days: Number(days) } : {}) }),
+      http.post<{ results: InviteResult[]; default_password?: string }>('/org/invitations', { candidates, lockdown, ...(days ? { deadline_days: Number(days) } : {}) }),
     onSuccess: (r) => {
       const invited = r.results.filter((x) => x.status === 'invited').length;
       if (invited && r.default_password) toast.success(`${invited} candidate${invited === 1 ? '' : 's'} added`, `New accounts sign in with their email and the password ${r.default_password}`);
@@ -108,6 +109,12 @@ function InviteForm() {
             </div>
           </TabsContent>
         </Tabs>
+        <Checkbox
+          checked={lockdown}
+          onChange={(e) => setLockdown(e.target.checked)}
+          label="Lockdown mode (proctored)"
+          description="The workdays run in fullscreen with copy, paste, right-click, printing, developer tools and shortcuts blocked. Leaving the assessment (switching tab or app, exiting fullscreen, a second screen or tab, screen capture) is a strike, shown on the report. At 3 strikes the assessment closes as incomplete."
+        />
         <div className="flex flex-wrap items-end justify-between gap-3 border-t border-line pt-4">
           <Field label="Days to complete" htmlFor="inv-days" hint={settings.data ? `Default ${settings.data.invite_deadline_days} days` : undefined} className="w-44">
             <Input id="inv-days" type="number" min={1} max={90} value={days} onChange={(e) => setDays(e.target.value)} placeholder={settings.data ? String(settings.data.invite_deadline_days) : ''} />
@@ -173,6 +180,11 @@ export function Invites() {
                   <TD>
                     <span className="block font-medium text-ink">{i.name || i.email}</span>
                     {i.name && <span className="block text-xs text-muted">{i.email}</span>}
+                    {i.lockdown && (
+                      <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-accent">
+                        <ShieldCheck className="size-3.5" /> Lockdown
+                      </span>
+                    )}
                   </TD>
                   <TD>{i.status === 'revoked' ? <Badge>Withdrawn</Badge> : i.status === 'pending' ? <Badge tone="info">Invited</Badge> : <span>{i.progress}</span>}</TD>
                   <TD className="whitespace-nowrap">{formatDate(i.deadline_at)}</TD>

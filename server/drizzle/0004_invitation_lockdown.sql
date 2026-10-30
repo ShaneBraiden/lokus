@@ -1,0 +1,1 @@
+ALTER TABLE "invitations" ADD COLUMN "lockdown" boolean DEFAULT false NOT NULL;

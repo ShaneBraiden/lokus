@@ -86,7 +86,7 @@ export function AssessmentDetail() {
 
       {attempt.phase === 'closed' && (
         <Alert tone="warning" title="This assessment is closed">
-          {attempt.close_reason === 'expired' ? 'The deadline passed before the assessment was finished.' : 'Lokus closed this assessment.'} If you think this is a mistake, contact the employer who invited you or hello@lokus.example.
+          {attempt.close_reason === 'expired' ? 'The deadline passed before the assessment was finished.' : attempt.close_reason === 'lockdown' ? 'The assessment reached the lockdown strike limit set by the employer.' : 'Lokus closed this assessment.'} If you think this is a mistake, contact the employer who invited you or hello@lokus.example.
         </Alert>
       )}
 

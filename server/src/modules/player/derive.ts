@@ -4,6 +4,7 @@ import {
   ATTEMPT_STATUS_LABELS,
   CRF_HEADER_FIELDS,
   CRF_VISIT_FIELDS,
+  LOCKDOWN_STRIKE_LIMIT,
   type AttemptStateDTO,
   type AttemptStatus,
   type ClockDTO,
@@ -142,10 +143,16 @@ function corrections(rows: StoredEvent[]): CorrectionDTO[] {
     });
 }
 
+/** Lockdown strikes recorded so far (telemetry, never scored). */
+export function lockdownStrikes(rows: StoredEvent[]): number {
+  return rows.filter((r) => r.eventType === 'lockdown_violation' && (r.metadata as { strike?: boolean }).strike).length;
+}
+
 export function buildState(input: {
   attempt: AttemptRow;
   simulationTitle: string;
   orgName: string | null;
+  lockdown: boolean;
   candidate: CandidateIdentity;
   progress: { version: number; state: Record<string, unknown> };
   rows: StoredEvent[];
@@ -195,6 +202,7 @@ export function buildState(input: {
       t1_submitted_at: attempt.t1SubmittedAt?.toISOString() ?? null,
       t2_submitted_at: attempt.t2SubmittedAt?.toISOString() ?? null,
       close_reason: attempt.closeReason,
+      lockdown: { required: input.lockdown, strikes: lockdownStrikes(rows), limit: LOCKDOWN_STRIKE_LIMIT },
     },
     candidate: { name: input.candidate.name, first_name: firstName(input.candidate.name), email: input.candidate.email },
     progress: input.progress,

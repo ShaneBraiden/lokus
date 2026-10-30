@@ -125,3 +125,18 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Proctored (lockdown) assessments: no text selection outside fields, and nothing to print. */
+.lockdown body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.lockdown :is(input, textarea, [contenteditable='true']) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+@media print {
+  .lockdown body {
+    display: none !important;
+  }
+}

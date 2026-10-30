@@ -3,7 +3,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { and, eq } from 'drizzle-orm';
 import { buildEvidence, ev } from '#engine';
 import { DOCUMENT_ORDER, DOCUMENTS, REFERENCE_CODES, getSection, tableOfContents } from '#content';
-import { PARTICIPANT_IDS, progressSchema, reflectionSchema, telemetrySchema, type DocumentSectionDTO, type DocumentSummaryDTO } from '@lokus/shared';
+import { LOCKDOWN_STRIKES, LOCKDOWN_STRIKE_LIMIT, PARTICIPANT_IDS, lockdownViolationSchema, progressSchema, reflectionSchema, telemetrySchema, type DocumentSectionDTO, type DocumentSummaryDTO } from '@lokus/shared';
 import type { AppDeps } from '../../context';
 import { attemptProgress, attempts } from '../../db/schema';
 import { conflict, notFound } from '../../lib/errors';
@@ -12,7 +12,7 @@ import { appendEvents, listEvents, toEngineEvents, withAttemptLock } from '../..
 import { recomputeResult } from '../../services/scoring';
 import { loadScoringPackage } from '../../services/scoringPackages';
 import { actor, assertPhase, loadOwnAttempt, phaseOf, requirePhase, withEvidence } from './access';
-import { buildState, w2Clock } from './derive';
+import { buildState, lockdownStrikes, w2Clock } from './derive';
 import { workday1Router } from './workday1';
 import { workday2Router } from './workday2';
 
@@ -36,6 +36,7 @@ export function playerRouter(deps: AppDeps): Router {
         attempt: ctx.attempt,
         simulationTitle: ctx.simulationTitle,
         orgName: ctx.orgName,
+        lockdown: ctx.lockdown,
         candidate: { name: req.auth!.user.name, email: req.auth!.user.email },
         progress: { version: progress?.version ?? 0, state: (progress?.state as Record<string, unknown>) ?? {} },
         rows,
@@ -150,6 +151,28 @@ export function playerRouter(deps: AppDeps): Router {
     const body = parseBody(telemetrySchema, req);
     await withAttemptLock(deps.db, req.attemptCtx!.attempt.id, (tx, attempt) => appendEvents(tx, deps.clock, attempt, [ev.telemetry('SYS', body.type, body.metadata)], actor(req)));
     res.status(202).json({ ok: true });
+  });
+
+  /**
+   * Lockdown violations, reported by the proctored player during the workdays. Each is kept as telemetry for the employer;
+   * leaving the assessment (a strike) counts towards the limit, at which the attempt is closed as incomplete.
+   */
+  r.post('/lockdown/violation', requirePhase('workday1', 'workday2'), async (req, res) => {
+    const body = parseBody(lockdownViolationSchema, req);
+    const ctx = req.attemptCtx!;
+    if (!ctx.lockdown) throw conflict('lockdown_not_required', 'This assessment is not proctored.');
+    const strike = (LOCKDOWN_STRIKES as readonly string[]).includes(body.kind);
+    const outcome = await withAttemptLock(deps.db, ctx.attempt.id, async (tx, attempt) => {
+      assertPhase(attempt, ['workday1', 'workday2']);
+      await appendEvents(tx, deps.clock, attempt, [ev.telemetry('SYS', 'lockdown_violation', { kind: body.kind, detail: body.detail, strike })], actor(req));
+      const strikes = lockdownStrikes(await listEvents(tx, attempt.id));
+      if (strikes < LOCKDOWN_STRIKE_LIMIT) return { strikes, closed: false };
+      const now = deps.clock.now();
+      await tx.update(attempts).set({ status: 'closed', closedAt: now, closeReason: 'lockdown', updatedAt: now }).where(eq(attempts.id, attempt.id));
+      return { strikes, closed: true };
+    });
+    if (outcome.closed) await recomputeResult(deps, ctx.attempt.id, 'close');
+    res.json({ ...outcome, limit: LOCKDOWN_STRIKE_LIMIT });
   });
 
   r.post('/reflection', requirePhase('done'), async (req, res) => {

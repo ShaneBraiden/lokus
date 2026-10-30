@@ -115,6 +115,7 @@ export interface AttemptStateDTO {
     t1_submitted_at: string | null;
     t2_submitted_at: string | null;
     close_reason: string | null;
+    lockdown: { required: boolean; strikes: number; limit: number };
   };
   candidate: { name: string; first_name: string; email: string };
   progress: { version: number; state: Record<string, unknown> };

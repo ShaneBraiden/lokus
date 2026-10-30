@@ -6,6 +6,7 @@ import { Alert, Button } from '@/ui';
 import { DocumentsScene, StudyTeamScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
+import { LockdownNotice, enterFullscreen } from '../Lockdown';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { screenPath } from '../SimulationShell';
 
@@ -56,10 +57,15 @@ export function Overview() {
 /** Workday 1 welcome: starting it starts Task 1. */
 export function Workday1Welcome() {
   useRememberScreen('welcome');
-  const { attemptId, refresh } = usePlayer();
+  const { attemptId, refresh, state } = usePlayer();
+  const lockdown = state.attempt.lockdown;
   const navigate = useNavigate();
   const start = useMutation({
-    mutationFn: () => http.post(`${base(attemptId)}/tasks/T1/start`),
+    // Proctored: fullscreen is entered from this click, before the workday starts.
+    mutationFn: async () => {
+      if (lockdown.required) await enterFullscreen();
+      return http.post(`${base(attemptId)}/tasks/T1/start`);
+    },
     onSuccess: async () => {
       await refresh();
       navigate(screenPath(attemptId, 'briefing'), { replace: true });
@@ -82,6 +88,7 @@ export function Workday1Welcome() {
       }
     >
       {start.error && <Alert tone="danger">{errorMessage(start.error)}</Alert>}
+      {lockdown.required && <LockdownNotice limit={lockdown.limit} />}
       <p>It is 08:30 at the Aurous Healthcare office. Dr. Anjali has sent you your first assignment.</p>
       <p>Read her email, then work in the review workspace. It holds the participants&rsquo; case report forms, the study documents, and the tools to record and raise what you find.</p>
       <p>When every participant has a decision recorded, you can submit Workday 1. Plan for about 60 minutes; the time shown is a guide.</p>

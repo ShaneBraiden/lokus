@@ -107,7 +107,7 @@ export function Closed() {
         </Button>
       }
     >
-      <p>{state.attempt.close_reason === 'expired' ? 'The deadline passed before the assessment was finished, so it can no longer be changed.' : 'Lokus closed this assessment, so it can no longer be changed.'}</p>
+      <p>{state.attempt.close_reason === 'expired' ? 'The deadline passed before the assessment was finished, so it can no longer be changed.' : state.attempt.close_reason === 'lockdown' ? 'The assessment reached the lockdown strike limit (leaving the assessment during a proctored workday), so it was closed and marked incomplete.' : 'Lokus closed this assessment, so it can no longer be changed.'}</p>
       <p>If you think this is a mistake, contact the employer who invited you or hello@lokus.example.</p>
     </ScreenFrame>
   );

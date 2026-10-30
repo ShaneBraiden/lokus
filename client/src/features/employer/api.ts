@@ -47,7 +47,16 @@ export interface Report {
   attempt: { id: string; status: string; status_label: string; started_at: string | null; t1_submitted_at: string | null; submitted_at: string | null; deadline_at: string | null; in_progress: boolean };
   result: EmployerResult | null;
   evidence: EvidenceView | null;
+  integrity: LockdownIntegrity;
   talent_pool?: boolean;
+}
+
+export interface LockdownIntegrity {
+  lockdown: boolean;
+  strikes: number;
+  limit: number;
+  closed_by_lockdown: boolean;
+  violations: { kind: string; detail: string; strike: boolean; at: string }[];
 }
 
 export interface InvitationRow {
@@ -58,6 +67,7 @@ export interface InvitationRow {
   progress: string;
   attempt_id: string | null;
   deadline_at: string | null;
+  lockdown: boolean;
   created_at: string;
   accepted_at: string | null;
   last_sent_at: string | null;
