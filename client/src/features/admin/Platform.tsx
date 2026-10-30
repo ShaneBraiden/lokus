@@ -375,7 +375,7 @@ export function Audit() {
       <PageHeader eyebrow="Lokus admin" title="Audit log" description="Who viewed or changed what. Entries cannot be edited or deleted." />
       <Select aria-label="Target type" className="w-60" value={type} onChange={(e) => setType(e.target.value)}>
         <option value="">All targets</option>
-        {['attempt', 'review_item', 'scoring_package', 'invitation', 'organization', 'user', 'share_request', 'result'].map((t) => (
+        {['access_request', 'attempt', 'review_item', 'scoring_package', 'invitation', 'organization', 'user', 'share_request', 'result'].map((t) => (
           <option key={t} value={t}>
             {t}
           </option>

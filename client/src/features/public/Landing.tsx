@@ -100,9 +100,9 @@ export function Landing() {
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-ink">Hiring decisions you can explain.</h2>
           <p className="mt-4 text-ink-2">Each result shows the outcome, a score for each workday, the competencies behind it and links to the candidate&rsquo;s actual work — so you can see why two candidates differ.</p>
           <Button asChild className="mt-8" size="lg">
-            <a href="mailto:hello@lokus.example?subject=Lokus%20access">
+            <Link to="/request-access">
               <Mail /> Request employer access
-            </a>
+            </Link>
           </Button>
         </Reveal>
         <Stagger inView className="grid gap-7">
@@ -173,7 +173,7 @@ export function Landing() {
               <Link to="/signup">Create account</Link>
             </Button>
             <Button asChild size="lg" variant="secondary" className="border-white/20 bg-white/10 text-white hover:bg-white/20">
-              <a href="mailto:hello@lokus.example?subject=Lokus%20access">Contact us</a>
+              <Link to="/request-access">Request employer access</Link>
             </Button>
           </div>
         </Reveal>

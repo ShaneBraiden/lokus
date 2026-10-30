@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { ApiError, errorMessage, http } from '@/lib/api';
 import { ME_KEY, homeFor, useMe, type Me } from '@/lib/auth';
-import { Alert, Button, Checkbox, Field, Input, Spinner } from '@/ui';
+import { Alert, Button, Checkbox, Field, Input, Select, Spinner, Textarea } from '@/ui';
 
 const emailField = z.email('Enter a valid email address.');
 const newPassword = z.string().min(10, 'Use at least 10 characters.').max(200);
@@ -41,6 +41,12 @@ export function SignIn() {
           <Link to="/signup" className="font-semibold text-accent hover:underline">
             Create an account
           </Link>
+          <p className="mt-3">
+            Hiring?{' '}
+            <Link to="/request-access" className="font-semibold text-accent hover:underline">
+              Request employer access
+            </Link>
+          </p>
         </>
       }
     >
@@ -93,7 +99,12 @@ export function SignUp() {
           <Link to="/login" className="font-semibold text-accent hover:underline">
             Sign in
           </Link>
-          <p className="mt-3">Hiring? Employer accounts are set up by Lokus — <a href="mailto:hello@lokus.example" className="font-semibold text-accent hover:underline">contact us</a>.</p>
+          <p className="mt-3">
+            Hiring?{' '}
+            <Link to="/request-access" className="font-semibold text-accent hover:underline">
+              Request employer access
+            </Link>
+          </p>
         </>
       }
     >
@@ -134,6 +145,100 @@ export function SignUp() {
           Create account
         </Button>
       </form>
+    </AuthLayout>
+  );
+}
+
+/** Public form for employers: a Lokus admin reviews each request and, on approval, sets up the organisation. */
+export function RequestAccess() {
+  const schema = z.object({
+    org_name: z.string().trim().min(2, "Enter your organisation's name.").max(120),
+    contact_name: z.string().trim().min(1, 'Enter your name.').max(120),
+    email: emailField,
+    job_title: z.string().trim().max(120),
+    website: z.string().trim().max(254),
+    team_size: z.enum(['', '1-10', '11-50', '51-200', '201-1000', '1000+']),
+    hiring_needs: z.string().trim().max(2000, 'Keep this under 2,000 characters.'),
+    accept_terms: z.literal(true, { error: 'Please accept the terms to continue.' }),
+  });
+  const form = useForm<z.input<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { job_title: '', website: '', team_size: '', hiring_needs: '' } });
+  const submit = useMutation({ mutationFn: (v: z.input<typeof schema>) => http.post('/access-requests', v) });
+  const { errors } = form.formState;
+  return (
+    <AuthLayout
+      title="Request employer access"
+      subtitle="Tell us about your organisation. Our team reviews every request and emails you with the decision."
+      footer={
+        <>
+          Already have an employer account?{' '}
+          <Link to="/login" className="font-semibold text-accent hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {submit.isSuccess ? (
+        <Alert tone="success" title="Request received">
+          Thanks — we will review your request and email {form.getValues('email')} once it has been decided. If approved, you will receive an invitation to set up your organisation&rsquo;s account.
+        </Alert>
+      ) : (
+        <form className="flex flex-col gap-5" onSubmit={form.handleSubmit((v) => submit.mutate(v))} noValidate>
+          {submit.error && (
+            <Alert tone="danger" action={submit.error instanceof ApiError && submit.error.code === 'email_taken' ? <Link to="/login" className="text-sm font-semibold text-accent">Sign in</Link> : undefined}>
+              {errorMessage(submit.error)}
+            </Alert>
+          )}
+          <Field label="Organisation name" htmlFor="org_name" error={errors.org_name?.message}>
+            <Input id="org_name" autoComplete="organization" aria-invalid={!!errors.org_name} {...form.register('org_name')} />
+          </Field>
+          <Field label="Your name" htmlFor="contact_name" error={errors.contact_name?.message}>
+            <Input id="contact_name" autoComplete="name" aria-invalid={!!errors.contact_name} {...form.register('contact_name')} />
+          </Field>
+          <Field label="Work email" htmlFor="email" hint="You will become the organisation's owner if approved." error={errors.email?.message}>
+            <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register('email')} />
+          </Field>
+          <Field label="Job title" htmlFor="job_title" optional error={errors.job_title?.message}>
+            <Input id="job_title" autoComplete="organization-title" {...form.register('job_title')} />
+          </Field>
+          <Field label="Company website" htmlFor="website" optional error={errors.website?.message}>
+            <Input id="website" type="url" inputMode="url" placeholder="https://" {...form.register('website')} />
+          </Field>
+          <Field label="Company size" htmlFor="team_size" optional>
+            <Select id="team_size" {...form.register('team_size')}>
+              <option value="">Select…</option>
+              <option value="1-10">1–10 employees</option>
+              <option value="11-50">11–50 employees</option>
+              <option value="51-200">51–200 employees</option>
+              <option value="201-1000">201–1,000 employees</option>
+              <option value="1000+">More than 1,000 employees</option>
+            </Select>
+          </Field>
+          <Field label="What are you hiring for?" htmlFor="hiring_needs" optional error={errors.hiring_needs?.message}>
+            <Textarea id="hiring_needs" rows={3} placeholder="Roles, number of candidates, timeline…" {...form.register('hiring_needs')} />
+          </Field>
+          <div>
+            <Checkbox
+              label={
+                <>
+                  I agree to the{' '}
+                  <Link to="/legal/terms" target="_blank" className="text-accent underline">
+                    terms
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/legal/privacy" target="_blank" className="text-accent underline">
+                    privacy notice
+                  </Link>
+                </>
+              }
+              {...form.register('accept_terms')}
+            />
+            {errors.accept_terms && <p className="mt-1.5 text-xs font-medium text-danger">{errors.accept_terms.message}</p>}
+          </div>
+          <Button type="submit" size="lg" loading={submit.isPending}>
+            Submit request
+          </Button>
+        </form>
+      )}
     </AuthLayout>
   );
 }

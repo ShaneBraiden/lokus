@@ -1,4 +1,4 @@
-import { Building, ClipboardCheck, FileClock, Gauge, GitCompare, Layers, ListChecks, ScrollText, UsersRound } from 'lucide-react';
+import { Building, ClipboardCheck, Inbox, FileClock, Gauge, GitCompare, Layers, ListChecks, ScrollText, UsersRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { DashboardLayout, type NavItem } from '@/layouts/DashboardLayout';
@@ -11,6 +11,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/admin/compare', label: 'Compare', icon: <GitCompare /> },
   { to: '/admin/packages', label: 'Scoring packages', icon: <Layers /> },
   { to: '/admin/content', label: 'Content & SME', icon: <ScrollText /> },
+  { to: '/admin/access-requests', label: 'Access requests', icon: <Inbox /> },
   { to: '/admin/orgs', label: 'Organisations', icon: <Building /> },
   { to: '/admin/users', label: 'Users', icon: <UsersRound /> },
   { to: '/admin/audit', label: 'Audit log', icon: <FileClock /> },

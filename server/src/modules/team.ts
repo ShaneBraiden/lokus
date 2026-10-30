@@ -20,17 +20,23 @@ const TEAM_INVITE_TTL = 7 * 24 * 60 * 60 * 1000;
  * away instead, with a new employer account on the default password if they have none.
  * Used by owners and by Lokus admins onboarding an org.
  */
-export async function inviteTeamMember(deps: AppDeps, input: { orgId: string; orgName: string; email: string; role: 'owner' | 'recruiter'; invitedBy: string | null }): Promise<string> {
-  const email = normaliseEmail(input.email);
+/** Throws unless this email can join an employer team (it is free, or an employer account with no organisation). */
+export async function assertCanJoinTeam(deps: Pick<AppDeps, 'db'>, rawEmail: string, orgId: string | null): Promise<void> {
+  const email = normaliseEmail(rawEmail);
   const [existingUser] = await deps.db.select({ id: users.id, kind: users.kind }).from(users).where(eq(users.email, email));
   if (existingUser && existingUser.kind !== 'employer') throw conflict('email_in_use', 'This email belongs to a candidate or staff account and cannot join an employer team.');
   if (existingUser) {
     const [m] = await deps.db.select({ orgId: memberships.orgId }).from(memberships).where(eq(memberships.userId, existingUser.id));
-    if (m) throw conflict('already_member', m.orgId === input.orgId ? 'This person is already a member of your team.' : 'This person already belongs to another organisation.');
+    if (m) throw conflict('already_member', m.orgId === orgId ? 'This person is already a member of your team.' : 'This person already belongs to another organisation.');
   }
+}
+
+export async function inviteTeamMember(deps: AppDeps, input: { orgId: string; orgName: string; email: string; name?: string; role: 'owner' | 'recruiter'; invitedBy: string | null }): Promise<string> {
+  const email = normaliseEmail(input.email);
+  await assertCanJoinTeam(deps, email, input.orgId);
   const token = randomToken(32);
   if (deps.config.directAccounts) {
-    const user = await findOrCreateAccount(deps, { email, name: '', kind: 'employer' });
+    const user = await findOrCreateAccount(deps, { email, name: input.name ?? '', kind: 'employer' });
     const now = deps.clock.now();
     const [inv] = await deps.db
       .insert(orgInvitations)

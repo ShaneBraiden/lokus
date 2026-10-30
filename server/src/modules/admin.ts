@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { directPassword } from '../auth/directAccounts';
@@ -13,7 +13,7 @@ import { normaliseEmail, parseBody, parseParams, parseQuery } from '../lib/http'
 import { adminAttemptsRouter } from './adminAttempts';
 import { adminContentRouter } from './adminContent';
 import { adminPackagesRouter } from './adminPackages';
-import { inviteTeamMember } from './team';
+import { assertCanJoinTeam, inviteTeamMember } from './team';
 
 function slugify(name: string): string {
   return (
@@ -24,6 +24,24 @@ function slugify(name: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 48) || 'org'
   );
+}
+
+/**
+ * Creates an employer organisation and invites its first owner. The owner's email is checked first, so a conflict never
+ * leaves an organisation without an owner.
+ */
+export async function createOrganization(deps: AppDeps, req: Request, input: { name: string; ownerEmail: string; ownerName?: string }): Promise<{ id: string; slug: string; name: string }> {
+  await assertCanJoinTeam(deps, input.ownerEmail, null);
+  let slug = slugify(input.name);
+  for (let i = 2; ; i++) {
+    const [taken] = await deps.db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug));
+    if (!taken) break;
+    slug = `${slugify(input.name)}-${i}`;
+  }
+  const [org] = await deps.db.insert(organizations).values({ name: input.name, slug, createdBy: req.auth!.user.id }).returning();
+  await inviteTeamMember(deps, { orgId: org.id, orgName: org.name, email: input.ownerEmail, name: input.ownerName, role: 'owner', invitedBy: req.auth!.user.id });
+  await audit(deps.db, req, { action: 'org.created', targetType: 'organization', targetId: org.id, orgId: org.id, details: { owner_email: normaliseEmail(input.ownerEmail) } });
+  return org;
 }
 
 /** Lokus admin: organisations, users and staff. Mounted at /api/admin behind requireStaff(['admin']). */
@@ -46,15 +64,7 @@ export function adminRouter(deps: AppDeps): Router {
   /** Creates an employer organisation and invites its first owner (or, with DIRECT_ACCOUNTS, adds them straight away). */
   r.post('/orgs', async (req, res) => {
     const body = parseBody(z.object({ name: z.string().trim().min(2).max(120), owner_email: z.email().max(254) }), req);
-    let slug = slugify(body.name);
-    for (let i = 2; ; i++) {
-      const [taken] = await deps.db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug));
-      if (!taken) break;
-      slug = `${slugify(body.name)}-${i}`;
-    }
-    const [org] = await deps.db.insert(organizations).values({ name: body.name, slug, createdBy: req.auth!.user.id }).returning();
-    await inviteTeamMember(deps, { orgId: org.id, orgName: org.name, email: body.owner_email, role: 'owner', invitedBy: req.auth!.user.id });
-    await audit(deps.db, req, { action: 'org.created', targetType: 'organization', targetId: org.id, orgId: org.id, details: { owner_email: normaliseEmail(body.owner_email) } });
+    const org = await createOrganization(deps, req, { name: body.name, ownerEmail: body.owner_email });
     res.status(201).json({ id: org.id, slug: org.slug, ...directPassword(deps) });
   });
 

@@ -155,6 +155,35 @@ export const orgInvitations = pgTable(
   (t) => [uniqueIndex('org_invitations_token_uq').on(t.tokenHash), index('org_invitations_org_idx').on(t.orgId)],
 );
 
+/** Employer access requests from the public form. A Lokus admin approves (creating the organisation) or rejects each. */
+export const employerAccessRequests = pgTable(
+  'employer_access_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgName: text('org_name').notNull(),
+    contactName: text('contact_name').notNull(),
+    /** Stored lower-cased. */
+    email: text('email').notNull(),
+    jobTitle: text('job_title').notNull().default(''),
+    website: text('website').notNull().default(''),
+    teamSize: text('team_size').notNull().default(''),
+    hiringNeeds: text('hiring_needs').notNull().default(''),
+    /** pending | approved | rejected */
+    status: text('status').notNull().default('pending'),
+    decisionNote: text('decision_note').notNull().default(''),
+    decidedBy: uuid('decided_by').references(() => users.id),
+    decidedAt: ts('decided_at'),
+    orgId: uuid('org_id').references(() => organizations.id),
+    ip: text('ip'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('employer_access_requests_status_idx').on(t.status, t.createdAt),
+    index('employer_access_requests_email_idx').on(t.email),
+    check('employer_access_requests_status_ck', sql`${t.status} in ('pending', 'approved', 'rejected')`),
+  ],
+);
+
 /** Append-only consent history (terms, privacy, talent pool listing, result sharing). */
 export const consentEvents = pgTable(
   'consent_events',

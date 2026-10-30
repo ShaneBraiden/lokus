@@ -50,6 +50,17 @@ export const emails = {
     ),
   teamInvite: (p: { orgName: string; role: string; url: string }) =>
     render('team_invite', `Join ${p.orgName} on Lokus`, 'Hello,', [`You have been invited to join ${p.orgName} on Lokus as ${p.role === 'owner' ? 'an owner' : 'a recruiter'}.`], { label: 'Accept and create your account', url: p.url }, 'This invitation expires in 7 days.'),
+  accessRequestReceived: (p: { name: string; orgName: string }) =>
+    render('access_request_received', 'We received your Lokus access request', `Hi ${p.name},`, [`Thanks for requesting employer access to Lokus for ${p.orgName}. Our team reviews every request and will email you once a decision has been made.`]),
+  accessRequestRejected: (p: { name: string; orgName: string; note: string }) =>
+    render(
+      'access_request_rejected',
+      'Your Lokus access request',
+      `Hi ${p.name},`,
+      [`Thank you for your interest in Lokus. We are unable to approve employer access for ${p.orgName} at this time.`, ...(p.note ? [p.note] : [])],
+      undefined,
+      'If you think this was a mistake, reply to this email.',
+    ),
 };
 
 /** Sends an email and records an outbox row (template, recipient, status). Bodies are not stored: they hold one-time links. */

@@ -9,6 +9,7 @@ import { authRouter } from './auth/routes';
 import type { AppDeps } from './context';
 import { apiNotFound, errorHandler } from './lib/errors';
 import { ConsoleMailer } from './lib/mailer';
+import { adminAccessRequestsRouter, publicAccessRequestsRouter } from './modules/accessRequests';
 import { adminRouter } from './modules/admin';
 import { reviewRouter } from './modules/review';
 import { candidateRouter } from './modules/candidate';
@@ -62,6 +63,7 @@ export function createApp(deps: AppDeps): express.Express {
   app.use('/api/auth', authRouter(deps));
   app.use('/api/invites', publicInvitesRouter(deps));
   app.use('/api/team-invites', publicTeamInvitesRouter(deps));
+  app.use('/api/access-requests', publicAccessRequestsRouter(deps));
   app.use('/api/candidate', requireCandidate, candidateRouter(deps));
   app.use('/api/attempts/:attemptId', requireCandidate, playerRouter(deps));
   app.use('/api/org/invitations', requireEmployer, employerInvitationsRouter(deps));
@@ -69,6 +71,7 @@ export function createApp(deps: AppDeps): express.Express {
   app.use('/api/org', requireEmployer, teamRouter(deps));
   app.use('/api/review', requireStaff(deps, ['admin', 'assessor']), reviewRouter(deps));
   app.use('/api/admin', requireStaff(deps, ['admin']), adminRouter(deps));
+  app.use('/api/admin', requireStaff(deps, ['admin']), adminAccessRequestsRouter(deps));
   // Development only: the emails the console mailer would have sent (links included), newest first.
   if (deps.config.env === 'development' && deps.mailer instanceof ConsoleMailer) {
     const mailer = deps.mailer;
