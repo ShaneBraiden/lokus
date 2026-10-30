@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { asc, desc, eq } from 'drizzle-orm';
-import { calculateAssessment, REVIEWER_CRITERIA, type AssessmentResult, type GrClause, type Rating, type ReviewerCriterionId } from '@lokus/engine';
+import { asc, desc, eq, max } from 'drizzle-orm';
+import { calculateAssessment, REVIEWER_CRITERIA, type AssessmentResult, type GrClause, type Rating, type ReviewerCriterionId } from '#engine';
 import type { AppDeps } from '../context';
 import type { Tx } from '../db/client';
 import { assessmentResults, grDispositions, reviewerRatings, reviewItems } from '../db/schema';
@@ -84,6 +84,15 @@ async function recomputeInTx(tx: Tx, deps: Pick<AppDeps, 'clock'>, attempt: Atte
  */
 export async function recomputeResult(deps: Pick<AppDeps, 'db' | 'clock'>, attemptId: string, trigger: ResultTrigger): Promise<{ row: StoredResult; created: boolean }> {
   return withAttemptLock(deps.db, attemptId, (tx, attempt) => recomputeInTx(tx, deps, attempt, trigger));
+}
+
+/** Subquery: the newest result version of every attempt (join on attempt_id and version to read it). */
+export function latestVersions(db: AppDeps['db']) {
+  return db
+    .select({ attemptId: assessmentResults.attemptId, version: max(assessmentResults.resultVersion).as('latest_version') })
+    .from(assessmentResults)
+    .groupBy(assessmentResults.attemptId)
+    .as('latest_versions');
 }
 
 export async function latestResult(db: AppDeps['db'], attemptId: string): Promise<StoredResult | null> {

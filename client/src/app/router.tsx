@@ -32,7 +32,8 @@ const invites = () => import('@/features/public/Invites');
 const staffMfa = () => import('@/features/public/StaffMfa');
 const candidate = () => import('@/features/candidate');
 const player = () => import('@/simulation');
-const staffAndEmployer = () => import('@/features/placeholder');
+const employer = () => import('@/features/employer');
+const admin = () => import('@/features/admin');
 
 /** Player screens declare the attempt phases in which they are reachable; the shell redirects anything else. */
 export interface ScreenHandle {
@@ -106,8 +107,40 @@ export const router = createBrowserRouter([
           { path: '*', lazy: load(player, 'PhaseRedirect') },
         ],
       },
-      { path: 'org/*', lazy: load(staffAndEmployer, 'EmployerArea') },
-      { path: 'admin/*', lazy: load(staffAndEmployer, 'AdminArea') },
+      {
+        path: 'org',
+        lazy: load(employer, 'EmployerArea'),
+        children: [
+          { index: true, lazy: load(employer, 'EmployerOverview') },
+          { path: 'candidates', lazy: load(employer, 'Candidates') },
+          { path: 'invites', lazy: load(employer, 'Invites') },
+          { path: 'results/:attemptId', lazy: load(employer, 'ResultReport') },
+          { path: 'compare', lazy: load(employer, 'EmployerCompare') },
+          { path: 'talent-pool', lazy: load(employer, 'TalentPool') },
+          { path: 'talent-pool/:attemptId', lazy: load(employer, 'PoolReport') },
+          { path: 'settings', lazy: load(employer, 'TeamSettings') },
+          { path: '*', element: <NotFound /> },
+        ],
+      },
+      {
+        path: 'admin',
+        lazy: load(admin, 'AdminArea'),
+        children: [
+          { index: true, lazy: load(admin, 'Overview') },
+          { path: 'review', lazy: load(admin, 'ReviewQueue') },
+          { path: 'review/:itemId', lazy: load(admin, 'ReviewItem') },
+          { path: 'attempts', lazy: load(admin, 'Attempts') },
+          { path: 'attempts/:attemptId', lazy: load(admin, 'AttemptDetailPage') },
+          { path: 'compare', lazy: load(admin, 'Compare') },
+          { path: 'packages', lazy: load(admin, 'Packages') },
+          { path: 'packages/:packageId', lazy: load(admin, 'PackageDetailPage') },
+          { path: 'content', lazy: load(admin, 'Content') },
+          { path: 'orgs', lazy: load(admin, 'Orgs') },
+          { path: 'users', lazy: load(admin, 'Users') },
+          { path: 'audit', lazy: load(admin, 'Audit') },
+          { path: '*', element: <NotFound /> },
+        ],
+      },
     ],
   },
 ]);

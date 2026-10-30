@@ -6,6 +6,7 @@ import { errorMessage, http } from '@/lib/api';
 import { useMe } from '@/lib/auth';
 import { dueLabel, firstName, formatDate } from '@/lib/format';
 import { Alert, Badge, Button, Card, CardBody, Checkbox, Dialog, EmptyState, PageHeader, PageLoader, Skeleton, useToast, type BadgeTone } from '@/ui';
+import { Stagger, StaggerItem } from '@/ui/motion';
 import { candidateKeys, useCandidateHome, type AttemptCard } from './api';
 
 export const STATUS_TONE: Record<string, BadgeTone> = {
@@ -40,7 +41,7 @@ function AssessmentCard({ a }: { a: AttemptCard }) {
   const inProgress = ['w1_in_progress', 'w1_submitted', 'w2_in_progress'].includes(a.status);
   const due = a.status !== 'submitted' && a.status !== 'closed' ? dueLabel(a.deadline_at) : null;
   return (
-    <Card className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="flex flex-col gap-5 p-5 transition-[translate,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-pop sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={STATUS_TONE[a.status]}>{a.status_label}</Badge>
@@ -197,7 +198,13 @@ export function CandidateHome() {
         {home.isFetching && !data ? (
           <Skeleton className="h-32" />
         ) : data.attempts.length ? (
-          data.attempts.map((a) => <AssessmentCard key={a.id} a={a} />)
+          <Stagger className="flex flex-col gap-3">
+            {data.attempts.map((a) => (
+              <StaggerItem key={a.id}>
+                <AssessmentCard a={a} />
+              </StaggerItem>
+            ))}
+          </Stagger>
         ) : (
           <Card>
             <EmptyState

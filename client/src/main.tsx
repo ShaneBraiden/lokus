@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
 import { router } from '@/app/router';
 import { ApiError } from '@/lib/api';
+import { MotionProvider } from '@/ui/motion';
 import { ToastProvider } from '@/ui/Toast';
 import './index.css';
 
@@ -21,9 +22,11 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
+      <MotionProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </MotionProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

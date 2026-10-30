@@ -1,8 +1,16 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "jsx": "react-jsx"
   },
-  "include": ["src", "test", "drizzle.config.ts", "build.mjs"]
+  "include": [
+    "src",
+    "test",
+    "fixtures/*.json",
+    "drizzle.config.ts",
+    "build.mjs"
+  ]
 }

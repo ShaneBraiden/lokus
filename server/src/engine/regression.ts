@@ -1,5 +1,5 @@
 import type { Outcome } from '@lokus/shared';
-import workbook from '../fixtures/workbook_v1_1.json';
+import workbook from '../../fixtures/workbook_v1_1.json';
 import { calculateAssessment } from './calculate';
 import { PERSONAS, type Persona, type PersonaExpectation } from './personas';
 import { CRITERIA, type CriterionId, type Rating, type ScoringPackage } from './types';

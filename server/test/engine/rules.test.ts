@@ -9,7 +9,7 @@ import {
   type CriterionId,
   type ScoringPackage,
   type T1Script,
-} from '../src';
+} from '../../src/engine';
 
 const DM220 = 'AHS-007-DM-220';
 const PIDS = [

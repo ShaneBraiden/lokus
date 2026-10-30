@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { SIMULATION } from '@lokus/content';
-import { canonicalJson, defaultScoringPackage, packageDigest, runRegressionSuite, sha256Hex } from '@lokus/engine';
+import { SIMULATION } from '#content';
+import { canonicalJson, defaultScoringPackage, packageDigest, runRegressionSuite, sha256Hex } from '#engine';
 import type { AppDeps } from '../context';
 import { hashPassword } from '../lib/crypto';
 import { answerKeys, candidateProfiles, consentEvents, memberships, organizations, regressionRuns, scoringPackages, simulationVersions, users } from './schema';

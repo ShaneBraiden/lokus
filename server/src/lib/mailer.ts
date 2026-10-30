@@ -37,12 +37,18 @@ export class MemoryMailer implements Mailer {
   }
 }
 
-/** Development mailer: prints messages (including links) to the server log instead of sending them. */
+/**
+ * Development mailer: prints messages (including links) to the server log instead of sending them, and keeps the
+ * last few in memory for the development outbox (/api/dev/outbox, never mounted in production).
+ */
 export class ConsoleMailer implements Mailer {
   readonly kind = 'console' as const;
+  readonly recent: (OutgoingEmail & { at: string })[] = [];
   constructor(private readonly log: Logger) {}
   async send(message: OutgoingEmail) {
     this.log.info({ to: message.to, subject: message.subject }, `\n──── email (not sent: development) ────\nTo: ${message.to}\nSubject: ${message.subject}\n\n${message.text}\n────────────────────────────────────────`);
+    this.recent.unshift({ ...message, at: new Date().toISOString() });
+    this.recent.length = Math.min(this.recent.length, 50);
     return { id: null };
   }
 }

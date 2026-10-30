@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useMe, useSignOut } from '@/lib/auth';
 import { Avatar, Button, DropdownContent, DropdownItem, DropdownLabel, DropdownMenu, DropdownSeparator, DropdownTrigger, Logo, Sheet, cn } from '@/ui';
+import { PageTransition } from '@/ui/motion';
 
 export interface NavItem {
   to: string;
@@ -102,7 +103,9 @@ export function DashboardLayout({ nav, area, subtitle, profileTo }: { nav: NavIt
           </div>
         </Sheet>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>

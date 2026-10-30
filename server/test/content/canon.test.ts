@@ -11,13 +11,13 @@ import {
   WORKDAY1_BRIEFING,
   WORKDAY2_INBOX,
   parseCrfDate,
-} from '../src';
+} from '../../src/content';
 
 const ALL_CONTENT = JSON.stringify({ DOCUMENTS, PARTICIPANTS, WORKDAY1_BRIEFING, WORKDAY2_INBOX });
 
 // The workbook export lives with the (server-only) engine; the canon test reads it as a fixture.
 const workbook = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../../engine/fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'),
+  readFileSync(fileURLToPath(new URL('../../fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'),
 ) as { answer_key: Record<string, unknown>[] };
 
 const participant = (id: string) => {

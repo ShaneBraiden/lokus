@@ -64,7 +64,7 @@ export function meResponse(deps: Pick<AppDeps, 'config'>, req: Request) {
       mfa: { required: mfaRequired, enabled: a.user.totpEnabled, verified: a.mfaVerified },
     },
     org: a.org ? { id: a.org.id, name: a.org.name, role: a.org.role, status: a.org.status } : null,
-    home: a.user.kind === 'candidate' ? '/app' : a.user.kind === 'employer' ? '/org' : '/admin',
+    home: a.user.kind === 'candidate' ? '/app' : a.user.kind === 'employer' ? '/org' : a.user.platformRole === 'assessor' ? '/admin/review' : '/admin',
   };
 }
 

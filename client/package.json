@@ -1,5 +1,5 @@
 {
-  "name": "@lokus/web",
+  "name": "@lokus/client",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "e2e:web": "vite --port 5174 --strictPort"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
@@ -23,6 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.61.0",
+    "motion": "14.3.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.91.0",
@@ -37,5 +39,6 @@
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.5"
-  }
+  },
+  "description": "Lokus web app: public site, candidate/employer/admin dashboards and the NorthrSim player (React SPA)."
 }

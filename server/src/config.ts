@@ -70,7 +70,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     emailFrom: e.EMAIL_FROM,
     requireStaffMfa: e.REQUIRE_STAFF_MFA ?? production,
     trustProxy: e.TRUST_PROXY || (production ? 1 : 0),
-    webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'apps/web/dist'),
+    webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'client/dist'),
     seedAdminEmail: e.SEED_ADMIN_EMAIL ?? null,
     seedAdminPassword: e.SEED_ADMIN_PASSWORD ?? null,
     seedDemo: e.SEED_DEMO ?? e.NODE_ENV === 'development',

@@ -1,7 +1,7 @@
 import type { Request, RequestHandler } from 'express';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { buildEvidence, type Evidence, type ScoringPackage } from '@lokus/engine';
+import { buildEvidence, type Evidence, type ScoringPackage } from '#engine';
 import type { AttemptPhase } from '@lokus/shared';
 import type { AppDeps } from '../../context';
 import type { Tx } from '../../db/client';

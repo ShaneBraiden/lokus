@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ANSWER_KEY_SCORING_NOTE, ANSWER_KEY_V1_1, PARAMETERS_V1_1, PHRASES_V1_1, RUBRIC_V1_1 } from '@lokus/engine';
-import { DOCUMENTS, WORKDAY1_BRIEFING, WORKDAY2_INBOX, type Block } from '@lokus/content';
+import { ANSWER_KEY_SCORING_NOTE, ANSWER_KEY_V1_1, PARAMETERS_V1_1, PHRASES_V1_1, RUBRIC_V1_1 } from '#engine';
+import { DOCUMENTS, WORKDAY1_BRIEFING, WORKDAY2_INBOX, type Block } from '#content';
 import * as shared from '@lokus/shared';
 
 /**
@@ -13,8 +13,8 @@ import * as shared from '@lokus/shared';
  * server-only reaches the browser: answer key, phrase lists, rubric anchors and parameter names (scoring), or the
  * text of study documents and observed emails (which must only arrive through server-observed requests).
  */
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const webDir = path.join(repoRoot, 'apps/web');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const webDir = path.join(repoRoot, 'client');
 let outDir = '';
 let bundle = '';
 
@@ -104,7 +104,7 @@ describe('web bundle canary', () => {
     expect(list.length).toBeGreaterThan(150);
     expect(bundle.length).toBeGreaterThan(100_000);
     // The scan itself works: the same canaries are found in the server-only sources they come from.
-    const engineSource = fs.readFileSync(path.join(repoRoot, 'packages/engine/src/phrases/v1_1.ts'), 'utf8');
+    const engineSource = fs.readFileSync(path.join(repoRoot, 'server/src/engine/phrases/v1_1.ts'), 'utf8');
     expect(list.filter((c) => c.source.startsWith('phrase list')).every((c) => engineSource.includes(c.text))).toBe(true);
   });
 

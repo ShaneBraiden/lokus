@@ -8,6 +8,9 @@ import { auditLog, memberships, organizations, users } from '../db/schema';
 import { audit } from '../lib/audit';
 import { conflict, notFound } from '../lib/errors';
 import { normaliseEmail, parseBody, parseParams, parseQuery } from '../lib/http';
+import { adminAttemptsRouter } from './adminAttempts';
+import { adminContentRouter } from './adminContent';
+import { adminPackagesRouter } from './adminPackages';
 import { inviteTeamMember } from './team';
 
 function slugify(name: string): string {
@@ -24,6 +27,9 @@ function slugify(name: string): string {
 /** Lokus admin: organisations, users and staff. Mounted at /api/admin behind requireStaff(['admin']). */
 export function adminRouter(deps: AppDeps): Router {
   const r = Router();
+  r.use(adminAttemptsRouter(deps));
+  r.use(adminPackagesRouter(deps));
+  r.use(adminContentRouter(deps));
 
   r.get('/orgs', async (_req, res) => {
     const rows = await deps.db

@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { ANSWER_KEY_V1_1, PARAMETERS_V1_1, RUBRIC_V1_1 } from '../src';
+import { ANSWER_KEY_V1_1, PARAMETERS_V1_1, RUBRIC_V1_1 } from '../../src/engine';
 
-const wb = JSON.parse(readFileSync(fileURLToPath(new URL('../fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'));
+const wb = JSON.parse(readFileSync(fileURLToPath(new URL('../../fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'));
 const split = (s: unknown) => String(s ?? '').split(/;|\|/).map((x) => x.trim()).filter(Boolean);
 
 describe('rubric mirror matches the workbook (Master_Rubric)', () => {

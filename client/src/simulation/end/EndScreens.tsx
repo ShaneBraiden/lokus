@@ -2,11 +2,10 @@ import { useMutation } from '@tanstack/react-query';
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import drAnjali from '@/assets/images/dr-anjali.webp';
-import quietDesk from '@/assets/images/quiet-desk.webp';
 import { errorMessage, http } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { Alert, Avatar, Button, Field, Textarea } from '@/ui';
+import { CompletionScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { useDraft, usePlayer, useRememberScreen } from '../PlayerContext';
@@ -41,7 +40,7 @@ export function Debrief() {
       }
     >
       <div className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4 shadow-card">
-        <Avatar name="Anjali Roy" src={drAnjali} />
+        <Avatar name="Anjali Roy" />
         <div className="text-[15px]">
           <p className="font-semibold text-ink">Dr. Anjali Roy</p>
           <p className="text-xs text-muted">Clinical Project Manager</p>
@@ -70,7 +69,7 @@ export function Complete() {
   const { state } = usePlayer();
   return (
     <ScreenFrame
-      image={quietDesk}
+      visual={<CompletionScene workdays={2} />}
       eyebrow="Assessment submitted"
       title="You’ve completed the simulation"
       actions={

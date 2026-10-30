@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { asc, eq } from 'drizzle-orm';
-import { canonicalJson, sha256Hex, type EngineEvent, type EventDraft } from '@lokus/engine';
+import { canonicalJson, sha256Hex, type EngineEvent, type EventDraft } from '#engine';
 import type { Db, Tx } from '../db/client';
 import { attemptEvents, attempts } from '../db/schema';
 import type { Clock } from '../lib/clock';

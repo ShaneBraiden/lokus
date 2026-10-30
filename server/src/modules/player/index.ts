@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { and, eq } from 'drizzle-orm';
-import { buildEvidence, ev } from '@lokus/engine';
-import { DOCUMENT_ORDER, DOCUMENTS, REFERENCE_CODES, getSection, tableOfContents } from '@lokus/content';
+import { buildEvidence, ev } from '#engine';
+import { DOCUMENT_ORDER, DOCUMENTS, REFERENCE_CODES, getSection, tableOfContents } from '#content';
 import { PARTICIPANT_IDS, progressSchema, reflectionSchema, telemetrySchema, type DocumentSectionDTO, type DocumentSummaryDTO } from '@lokus/shared';
 import type { AppDeps } from '../../context';
 import { attemptProgress, attempts } from '../../db/schema';

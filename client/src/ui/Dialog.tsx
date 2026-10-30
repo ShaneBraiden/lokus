@@ -37,7 +37,7 @@ export function Dialog({
           onInteractOutside={(e) => !dismissible && e.preventDefault()}
           onEscapeKeyDown={(e) => !dismissible && e.preventDefault()}
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 animate-fade-in flex-col rounded-xl border border-line bg-surface shadow-pop focus:outline-none',
+            'fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 animate-scale-in flex-col rounded-xl border border-line bg-surface shadow-pop focus:outline-none',
             sizes[size],
           )}
         >

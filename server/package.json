@@ -1,5 +1,5 @@
 {
-  "name": "@lokus/api",
+  "name": "@lokus/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,12 +10,11 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate-cli.ts",
-    "db:seed": "tsx src/db/seed-cli.ts"
+    "db:seed": "tsx src/db/seed-cli.ts",
+    "e2e:server": "node -e \"require('fs').rmSync('../.data/e2e-pglite',{recursive:true,force:true})\" && tsx src/server.ts --port=4001"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.11",
-    "@lokus/content": "*",
-    "@lokus/engine": "*",
     "@lokus/shared": "*",
     "@react-pdf/renderer": "^4.9.0",
     "cookie-parser": "^1.4.7",
@@ -42,5 +41,10 @@
     "esbuild": "^0.28.2",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15"
+  },
+  "description": "Lokus API (Express) with the server-only scoring engine (src/engine) and simulation content (src/content).",
+  "imports": {
+    "#engine": "./src/engine/index.ts",
+    "#content": "./src/content/index.ts"
   }
 }

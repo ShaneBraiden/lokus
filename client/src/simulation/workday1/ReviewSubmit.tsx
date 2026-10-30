@@ -8,14 +8,15 @@ import { base, useDocuments } from '../api';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { screenPath } from '../SimulationShell';
 import { shortId, targetLabel } from './model';
+import { Stagger, StaggerItem } from '@/ui/motion';
 import { W1Header } from './W1Header';
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-line bg-surface px-4 py-3 shadow-card">
+    <StaggerItem className="rounded-xl border border-line bg-surface px-4 py-3 shadow-card">
       <p className="text-xs font-medium text-muted">{label}</p>
       <p className="mt-0.5 text-2xl font-semibold text-ink tabular">{value}</p>
-    </div>
+    </StaggerItem>
   );
 }
 
@@ -60,12 +61,12 @@ export function ReviewSubmit() {
           </Alert>
         )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stagger className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Records reviewed" value={`${t1.participants.length - unreviewed.length}/${t1.participants.length}`} />
           <Stat label="Findings logged" value={active.length} />
           <Stat label="Escalations sent" value={t1.escalations.length} />
           <Stat label="Messages sent" value={t1.notes.length} />
-        </div>
+        </Stagger>
 
         <Card>
           <CardHeader title="Participant records" description="Every record needs at least one finding or a “No deviation” decision." />

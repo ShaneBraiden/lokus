@@ -26,3 +26,6 @@ export {
 } from './Menu';
 export { ToastProvider, useToast } from './Toast';
 export { Spinner, PageLoader, Skeleton, EmptyState, PageHeader, Logo, Avatar, RadioCards, KeyValue } from './misc';
+export { Tooltip } from './Tooltip';
+export { Table, THead, TH, TR, TD } from './Table';
+export { StatTile } from './StatTile';

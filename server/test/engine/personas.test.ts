@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Outcome } from '@lokus/shared';
 import { describe, expect, it } from 'vitest';
-import { CRITERIA, PERSONAS, RUBRIC_V1_1, calculateAssessment, decideOutcome, defaultScoringPackage, type CriterionId, type Rating, type TaskScore } from '../src';
+import { CRITERIA, PERSONAS, RUBRIC_V1_1, calculateAssessment, decideOutcome, defaultScoringPackage, type CriterionId, type Rating, type TaskScore } from '../../src/engine';
 
-const wb = JSON.parse(readFileSync(fileURLToPath(new URL('../fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'));
+const wb = JSON.parse(readFileSync(fileURLToPath(new URL('../../fixtures/workbook_v1_1.json', import.meta.url)), 'utf8'));
 const OUTCOME: Record<string, Outcome> = {
   'Meets bar': 'MEETS_BAR',
   'Does not meet bar': 'DOES_NOT_MEET_BAR',

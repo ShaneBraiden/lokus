@@ -3,12 +3,19 @@ import type { ReactNode } from 'react';
 import type { AttemptStateDTO, DocumentSummaryDTO, FindingDTO } from '@lokus/shared';
 import { formatTime } from '@/lib/format';
 import { Badge, Button } from '@/ui';
+import { AnimatePresence, EASE_OUT, m } from '@/ui/motion';
 import { recipientNames } from '../shared/RecipientPicker';
 import { fieldLabel, locationText, SEVERITY_TONE, visitLabel, type Cell } from './model';
 
 export function FindingCard({ finding, docs, onEdit, onWithdraw, showTarget }: { finding: FindingDTO; docs: DocumentSummaryDTO[] | undefined; onEdit: () => void; onWithdraw: () => void; showTarget?: string }) {
   return (
-    <article className="rounded-lg border border-line bg-surface p-3.5 shadow-card">
+    <m.article
+      className="rounded-lg border border-line bg-surface p-3.5 shadow-card"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 16, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.3, ease: EASE_OUT }}
+    >
       <div className="flex items-start gap-2">
         <span className="mt-px rounded bg-subtle px-1.5 py-0.5 font-mono text-[11px] font-semibold text-ink-2">{finding.id}</span>
         <div className="min-w-0 flex-1">
@@ -36,7 +43,7 @@ export function FindingCard({ finding, docs, onEdit, onWithdraw, showTarget }: {
           <Trash /> Withdraw
         </Button>
       </div>
-    </article>
+    </m.article>
   );
 }
 
@@ -84,9 +91,12 @@ export function RecordPanel({
   return (
     <div className="flex flex-col gap-6">
       <Section title="Findings" count={findings.length}>
-        {findings.length ? (
-          findings.map((f) => <FindingCard key={f.id} finding={f} docs={docs} onEdit={() => onEdit(f)} onWithdraw={() => onWithdraw(f)} />)
-        ) : (
+        <AnimatePresence initial={false}>
+          {findings.map((f) => (
+            <FindingCard key={f.id} finding={f} docs={docs} onEdit={() => onEdit(f)} onWithdraw={() => onWithdraw(f)} />
+          ))}
+        </AnimatePresence>
+        {findings.length ? null : (
           <p className="rounded-lg border border-dashed border-line-strong px-3.5 py-3 text-[13px] text-muted">{summary?.status === 'no_deviation' ? 'You recorded no deviation for this participant.' : 'Nothing recorded for this participant yet.'}</p>
         )}
       </Section>

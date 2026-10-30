@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { activeFindings, ev, type EventDraft, type FindingSnapshot } from '@lokus/engine';
-import { REFERENCE_CODES, WORKDAY1_BRIEFING, getParticipant, getSection } from '@lokus/content';
+import { activeFindings, ev, type EventDraft, type FindingSnapshot } from '#engine';
+import { REFERENCE_CODES, WORKDAY1_BRIEFING, getParticipant, getSection } from '#content';
 import {
   CRF_HEADER_FIELDS,
   cellSchema,

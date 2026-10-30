@@ -1,5 +1,5 @@
-import { activeFindings, type Evidence, type FindingState, type ScoringPackage } from '@lokus/engine';
-import { PARTICIPANTS, getParticipant, type MailMessage, type ParticipantCrf } from '@lokus/content';
+import { activeFindings, type Evidence, type FindingState, type ScoringPackage } from '#engine';
+import { PARTICIPANTS, getParticipant, type MailMessage, type ParticipantCrf } from '#content';
 import {
   ATTEMPT_STATUS_LABELS,
   CRF_HEADER_FIELDS,

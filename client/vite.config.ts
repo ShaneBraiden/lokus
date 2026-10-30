@@ -5,26 +5,28 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(here, '../..');
+const repoRoot = path.resolve(here, '..');
+const serverDir = path.join(repoRoot, 'server') + path.sep;
 
-// The scoring engine (rubric, answer key, phrase lists) and the simulation content are server-only.
-// Fail the build if anything in the web app tries to import them.
-function forbidServerOnlyPackages(): Plugin {
-  const forbidden = ['@lokus/engine', '@lokus/content'];
+// The scoring engine (rubric, answer key, phrase lists) and the simulation content live in server/ and are
+// server-only. Fail the build if anything in the client resolves a module from there, however it is imported.
+function forbidServerCode(): Plugin {
   return {
-    name: 'lokus-forbid-server-only',
+    name: 'lokus-forbid-server-code',
     enforce: 'pre',
-    resolveId(source, importer) {
-      if (forbidden.some((p) => source === p || source.startsWith(`${p}/`))) {
-        throw new Error(`[lokus] ${source} is server-only and must not be imported by the web app (imported from ${importer})`);
+    async resolveId(source, importer, options) {
+      if (source.startsWith('\0') || !importer) return null;
+      const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
+      if (resolved && path.normalize(resolved.id.split('?')[0]).startsWith(serverDir)) {
+        throw new Error(`[lokus] ${source} resolves into server/, which is server-only (imported from ${importer})`);
       }
-      return null;
+      return resolved;
     },
   };
 }
 
 export default defineConfig({
-  plugins: [forbidServerOnlyPackages(), react(), tailwindcss()],
+  plugins: [forbidServerCode(), react(), tailwindcss()],
   resolve: {
     alias: { '@': path.resolve(here, 'src') },
   },
@@ -32,12 +34,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': { target: 'http://localhost:4000', changeOrigin: false },
+      '/api': { target: process.env.LOKUS_API_PROXY ?? 'http://localhost:4000', changeOrigin: false },
     },
     fs: {
-      // Only the web app and client-safe packages may be served by the dev server.
-      allow: [path.resolve(here), path.resolve(repoRoot, 'packages/shared'), path.resolve(repoRoot, 'node_modules')],
-      deny: ['.env', '.env.*', '**/packages/engine/**', '**/packages/content/**', '**/apps/api/**'],
+      // Only the client and the client-safe shared package may be served by the dev server.
+      allow: [path.resolve(here), path.resolve(repoRoot, 'shared'), path.resolve(repoRoot, 'node_modules')],
+      deny: ['.env', '.env.*', '**/server/**'],
     },
   },
   build: {

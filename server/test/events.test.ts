@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
-import { ev } from '@lokus/engine';
+import { ev } from '#engine';
 import { attemptEvents, attempts, scoringPackages } from '../src/db/schema';
 import { SIMULATION_VERSION_ID } from '../src/db/seed';
 import { createAttempt } from '../src/services/attempts';

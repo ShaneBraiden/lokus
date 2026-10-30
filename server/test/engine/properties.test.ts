@@ -10,7 +10,7 @@ import {
   type AssessmentResult,
   type EngineEvent,
   type T1Script,
-} from '../src';
+} from '../../src/engine';
 
 const pkg = defaultScoringPackage();
 

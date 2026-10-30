@@ -1,5 +1,5 @@
 import pino from 'pino';
-import type { ScenarioAction } from '@lokus/engine';
+import type { ScenarioAction } from '#engine';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { createApp } from '../src/app';
@@ -92,6 +92,44 @@ export function allKeys(value: unknown, out = new Set<string>()): Set<string> {
     }
   }
   return out;
+}
+
+/**
+ * Plays a regression persona's candidate actions through the real player API and returns the attempt id. With
+ * `invitedBy`, the candidate accepts that employer's emailed invitation first (so the employer can see the result).
+ */
+export async function playPersona(
+  ctx: TestContext,
+  personaId: string,
+  email: string,
+  opts: { name?: string; invitedBy?: ReturnType<typeof request.agent>; untilPhase?: 'workday2' } = {},
+): Promise<string> {
+  const { PERSONAS } = await import('#engine');
+  const { SIMULATION_VERSION_ID } = await import('../src/db/seed');
+  const { createAttempt } = await import('../src/services/attempts');
+  const run = PERSONAS.find((p) => p.id === personaId)!.build();
+  ctx.clock.set(run.actions[0].at - 60_000);
+  let attemptId: string;
+  let agent: ReturnType<typeof request.agent>;
+  if (opts.invitedBy) {
+    const sent = await opts.invitedBy.post('/api/org/invitations').send({ candidates: [{ email, name: opts.name ?? 'Test Candidate' }] });
+    if (sent.status !== 201) throw new Error(`invite failed: ${JSON.stringify(sent.body)}`);
+    agent = ctx.agent();
+    const accepted = await agent.post('/api/invites/accept').send({ token: ctx.mailer.tokenFrom(email, '/invite'), name: opts.name ?? 'Test Candidate', password: PASSWORD, consent: true });
+    if (accepted.status !== 200 && accepted.status !== 201) throw new Error(`accept failed: ${JSON.stringify(accepted.body)}`);
+    attemptId = accepted.body.attempt_id;
+  } else {
+    const user = await makeUser(ctx, { email, name: opts.name, kind: 'candidate' });
+    attemptId = (await ctx.deps.db.transaction((tx) => createAttempt(tx, { candidateId: user.id, simulationVersionId: SIMULATION_VERSION_ID, origin: 'self' }))).id;
+    agent = await signIn(ctx, email);
+  }
+  for (const { at, action } of run.actions) {
+    if (opts.untilPhase === 'workday2' && action.kind === 'task_submit' && action.task === 'T2') break;
+    ctx.clock.set(at);
+    const res = await perform(agent, `/api/attempts/${attemptId}`, action);
+    if (res.status >= 300) throw new Error(`${action.kind}: ${JSON.stringify(res.body)}`);
+  }
+  return attemptId;
 }
 
 /** Drives one scripted action through the real player API. */

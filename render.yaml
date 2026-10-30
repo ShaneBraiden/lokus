@@ -1,0 +1,46 @@
+# Render Blueprint — one Node web service that serves the API and the built client (Singapore, next to the
+# Supabase database). Migrations run at startup. See docs/DEPLOYMENT.md for the full checklist.
+services:
+  - type: web
+    name: lokus
+    runtime: node
+    region: singapore
+    # Starter, not Free: free instances sleep and would cold-start in the middle of a candidate's assessment.
+    plan: starter
+    # Dev dependencies (Vite, TypeScript, esbuild) are needed to build even though NODE_ENV is production.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Public URL, e.g. https://lokus.onrender.com or your custom domain (email links + CSRF origin check).
+      - key: APP_URL
+        sync: false
+      # Supabase "Session pooler" connection string for the Singapore project.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: no-verify
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: REQUIRE_STAFF_MFA
+        value: "true"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # First admin, created at startup if missing. Remove SEED_ADMIN_PASSWORD after the first sign-in.
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO
+        value: "false"
+      - key: LOG_LEVEL
+        value: info

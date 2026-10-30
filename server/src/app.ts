@@ -8,8 +8,11 @@ import { attachAuth, originCheck, requireCandidate, requireEmployer, requireStaf
 import { authRouter } from './auth/routes';
 import type { AppDeps } from './context';
 import { apiNotFound, errorHandler } from './lib/errors';
+import { ConsoleMailer } from './lib/mailer';
 import { adminRouter } from './modules/admin';
+import { reviewRouter } from './modules/review';
 import { candidateRouter } from './modules/candidate';
+import { employerRouter } from './modules/employer';
 import { employerInvitationsRouter, publicInvitesRouter } from './modules/invitations';
 import { playerRouter } from './modules/player';
 import { publicTeamInvitesRouter, teamRouter } from './modules/team';
@@ -62,14 +65,26 @@ export function createApp(deps: AppDeps): express.Express {
   app.use('/api/candidate', requireCandidate, candidateRouter(deps));
   app.use('/api/attempts/:attemptId', requireCandidate, playerRouter(deps));
   app.use('/api/org/invitations', requireEmployer, employerInvitationsRouter(deps));
+  app.use('/api/org', requireEmployer, employerRouter(deps));
   app.use('/api/org', requireEmployer, teamRouter(deps));
+  app.use('/api/review', requireStaff(deps, ['admin', 'assessor']), reviewRouter(deps));
   app.use('/api/admin', requireStaff(deps, ['admin']), adminRouter(deps));
+  // Development only: the emails the console mailer would have sent (links included), newest first.
+  if (deps.config.env === 'development' && deps.mailer instanceof ConsoleMailer) {
+    const mailer = deps.mailer;
+    app.get('/api/dev/outbox', (req, res) => {
+      const to = typeof req.query.to === 'string' ? req.query.to.toLowerCase() : null;
+      res.json({ emails: mailer.recent.filter((m) => !to || m.to === to).map(({ to: t, subject, text, template, at }) => ({ to: t, subject, text, template, at })) });
+    });
+  }
   app.use('/api', apiNotFound);
 
   // Production: serve the built SPA (never the Vite dev server, never source maps).
   if (deps.config.env === 'production' && existsSync(deps.config.webDistDir)) {
     app.use(express.static(deps.config.webDistDir, { index: false, maxAge: '1h', setHeaders: (res, file) => file.includes(`${path.sep}assets${path.sep}`) && res.set('Cache-Control', 'public, max-age=31536000, immutable') }));
-    app.get(/^(?!\/api\/).*/, (_req, res) => {
+    app.get(/^(?!\/api\/).*/, (req, res, next) => {
+      // A missing file (an old chunk after a deploy, a source map) is a 404, not the app shell.
+      if (req.path.startsWith('/assets/') || /\.[a-z0-9]{1,8}$/i.test(req.path)) return next();
       res.sendFile(path.join(deps.config.webDistDir, 'index.html'));
     });
   }

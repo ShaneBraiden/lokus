@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import type { AnswerKeyRow, Parameters, PhraseLists, RubricConfig, ScoringPackage } from '@lokus/engine';
+import type { AnswerKeyRow, Parameters, PhraseLists, RubricConfig, ScoringPackage } from '#engine';
 import type { DbOrTx } from '../db/client';
 import { answerKeys, scoringPackages } from '../db/schema';
 import { conflict, notFound } from '../lib/errors';

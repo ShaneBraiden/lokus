@@ -21,7 +21,7 @@ export function PageLoader() {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-subtle', className)} aria-hidden />;
+  return <div className={cn('shimmer rounded-md', className)} aria-hidden />;
 }
 
 export function EmptyState({ icon, title, children, action, className }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode; className?: string }) {

@@ -1,10 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import office from '@/assets/images/office.webp';
-import workplace from '@/assets/images/workplace.webp';
 import { errorMessage, http } from '@/lib/api';
 import { Alert, Button } from '@/ui';
+import { DocumentsScene, StudyTeamScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
@@ -27,7 +26,7 @@ export function Overview() {
   const navigate = useNavigate();
   return (
     <ScreenFrame
-      image={workplace}
+      visual={<StudyTeamScene candidateName={state.candidate.name} />}
       eyebrow="NorthrSim · Clinical Trial Associate"
       title={`Welcome to Aurous Healthcare, ${state.candidate.first_name}`}
       actions={
@@ -68,7 +67,7 @@ export function Workday1Welcome() {
   });
   return (
     <ScreenFrame
-      image={office}
+      visual={<DocumentsScene />}
       eyebrow="Workday 1 · Tuesday 20 October 2026"
       title="Your first day on the study team"
       actions={

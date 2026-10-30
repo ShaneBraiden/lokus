@@ -20,7 +20,7 @@ export function findRepoRoot(start = path.dirname(fileURLToPath(import.meta.url)
   }
 }
 
-/** The API package's drizzle migrations folder. */
+/** The server package's drizzle migrations folder. */
 export function migrationsFolder(): string {
-  return path.join(findRepoRoot(), 'apps', 'api', 'drizzle');
+  return path.join(findRepoRoot(), 'server', 'drizzle');
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultScoringPackage, runRegressionSuite } from '../src';
+import { defaultScoringPackage, runRegressionSuite } from '../../src/engine';
 
 describe('runRegressionSuite (used to gate package publishing)', () => {
   it('passes every persona on the default v1.1 package', () => {

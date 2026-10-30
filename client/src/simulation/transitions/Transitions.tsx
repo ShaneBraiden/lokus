@@ -1,11 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { ArrowRight, CircleCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
-import deskEmail from '@/assets/images/desk-email.webp';
-import quietDesk from '@/assets/images/quiet-desk.webp';
 import { errorMessage, http } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { Alert, Button } from '@/ui';
+import { CompletionScene, InboxScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
@@ -17,7 +16,7 @@ export function Workday1Complete() {
   const navigate = useNavigate();
   return (
     <ScreenFrame
-      image={quietDesk}
+      visual={<CompletionScene workdays={1} />}
       eyebrow="Workday 1 · submitted"
       title="That’s the end of Workday 1"
       actions={
@@ -54,7 +53,7 @@ export function Workday2Intro() {
   });
   return (
     <ScreenFrame
-      image={deskEmail}
+      visual={<InboxScene />}
       eyebrow="Workday 2 · Wednesday 21 October 2026"
       title="A new morning at Aurous Healthcare"
       actions={

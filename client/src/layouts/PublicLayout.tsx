@@ -2,6 +2,7 @@ import { Link, Outlet } from 'react-router';
 import { useMe, homeFor } from '@/lib/auth';
 import { Button } from '@/ui/Button';
 import { Logo } from '@/ui/misc';
+import { PageTransition } from '@/ui/motion';
 
 export function PublicHeader() {
   const { data: me } = useMe();
@@ -65,7 +66,9 @@ export function PublicLayout() {
     <div className="flex min-h-dvh flex-col">
       <PublicHeader />
       <main className="flex-1">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </main>
       <PublicFooter />
     </div>

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { ev } from '@lokus/engine';
-import { SPONSOR_EMAIL_ID, WORKDAY2_INBOX } from '@lokus/content';
+import { ev } from '#engine';
+import { SPONSOR_EMAIL_ID, WORKDAY2_INBOX } from '#content';
 import { decisionValueSchema, messageSchema, narrativeSchema, replySchema, requestRecordSchema, type MailSummaryDTO } from '@lokus/shared';
 import type { AppDeps } from '../../context';
 import { attempts } from '../../db/schema';

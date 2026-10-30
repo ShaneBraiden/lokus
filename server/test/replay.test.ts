@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { PERSONAS, calculateAssessment, defaultScoringPackage, type AssessmentResult } from '@lokus/engine';
+import { PERSONAS, calculateAssessment, defaultScoringPackage, type AssessmentResult } from '#engine';
 import { attempts } from '../src/db/schema';
 import { SIMULATION_VERSION_ID } from '../src/db/seed';
 import { createAttempt } from '../src/services/attempts';
