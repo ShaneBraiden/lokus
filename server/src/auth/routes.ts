@@ -49,6 +49,11 @@ export async function sendSetPasswordEmail(deps: AppDeps, user: { id: string; em
   await sendEmail(deps, user.email, emails.setPassword(user.name, `${deps.config.appUrl}/reset?token=${token}`));
 }
 
+/** Whether the user counts as confirmed: everyone does while REQUIRE_EMAIL_VERIFICATION is off. */
+export function isEmailConfirmed(deps: Pick<AppDeps, 'config'>, user: { emailVerified: boolean }): boolean {
+  return user.emailVerified || !deps.config.requireEmailVerification;
+}
+
 /** The signed-in identity as the web app sees it, including where its home dashboard is. */
 export function meResponse(deps: Pick<AppDeps, 'config'>, req: Request) {
   const a = req.auth!;
@@ -60,7 +65,7 @@ export function meResponse(deps: Pick<AppDeps, 'config'>, req: Request) {
       name: a.user.name,
       kind: a.user.kind,
       platform_role: a.user.platformRole,
-      email_verified: a.user.emailVerified,
+      email_verified: isEmailConfirmed(deps, a.user),
       mfa: { required: mfaRequired, enabled: a.user.totpEnabled, verified: a.mfaVerified },
     },
     org: a.org ? { id: a.org.id, name: a.org.name, role: a.org.role, status: a.org.status } : null,
@@ -84,7 +89,7 @@ export function authRouter(deps: AppDeps): Router {
       { userId: user.id, kind: 'terms', action: 'grant', textVersion: TERMS_VERSION, ip: req.ip },
       { userId: user.id, kind: 'privacy', action: 'grant', textVersion: PRIVACY_VERSION, ip: req.ip },
     ]);
-    await sendVerificationEmail(deps, user);
+    if (deps.config.requireEmailVerification) await sendVerificationEmail(deps, user);
     const sessionId = await createSession(deps, user, req, res);
     req.auth = { sessionId, user: toAuthUser(user), mfaVerified: false, org: null };
     res.status(201).json(meResponse(deps, req));
@@ -125,7 +130,7 @@ export function authRouter(deps: AppDeps): Router {
 
   r.post('/resend-verification', requireAuth, limiter, async (req, res) => {
     const u = req.auth!.user;
-    if (!u.emailVerified) await sendVerificationEmail(deps, u);
+    if (!isEmailConfirmed(deps, u)) await sendVerificationEmail(deps, u);
     res.json({ ok: true });
   });
 

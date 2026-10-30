@@ -23,6 +23,20 @@ describe('candidate sign-up and email verification', () => {
     expect((await ctx.agent().post('/api/auth/verify-email').send({ token })).body.error.code).toBe('invalid_token');
   });
 
+  it('treats candidates as confirmed and sends no email while verification is off', async () => {
+    const off = await createTestContext({ requireEmailVerification: false });
+    try {
+      const agent = off.agent();
+      const res = await agent.post('/api/auth/signup').send({ name: 'Ravi Kumar', email: 'ravi@example.com', password: PASSWORD, accept_terms: true });
+      expect(res.body.user.email_verified).toBe(true);
+      expect(off.mailer.sent).toHaveLength(0);
+      expect((await agent.get('/api/candidate/home')).body.email_verified).toBe(true);
+      expect((await agent.post('/api/candidate/attempts').send({ consent: true })).status).toBe(201);
+    } finally {
+      await off.close();
+    }
+  });
+
   it('rejects a duplicate email and weak passwords', async () => {
     const dup = await ctx.agent().post('/api/auth/signup').send({ name: 'X', email: 'meera@example.com', password: PASSWORD, accept_terms: true });
     expect(dup.status).toBe(409);

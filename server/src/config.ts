@@ -27,6 +27,8 @@ const EnvSchema = z.object({
   EMAIL_FROM: z.string().default('Lokus <no-reply@lokus.example>'),
   /** Require TOTP two-factor authentication for Lokus staff (admin, assessor). */
   REQUIRE_STAFF_MFA: bool,
+  /** Require candidates who sign up themselves to confirm their email before starting an assessment. Off by default. */
+  REQUIRE_EMAIL_VERIFICATION: bool,
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   WEB_DIST_DIR: z.string().optional(),
   SEED_ADMIN_EMAIL: z.email().optional(),
@@ -47,6 +49,7 @@ export interface AppConfig {
   resendApiKey: string | null;
   emailFrom: string;
   requireStaffMfa: boolean;
+  requireEmailVerification: boolean;
   trustProxy: number;
   webDistDir: string;
   seedAdminEmail: string | null;
@@ -86,6 +89,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     resendApiKey: e.RESEND_API_KEY ?? null,
     emailFrom: e.EMAIL_FROM,
     requireStaffMfa: e.REQUIRE_STAFF_MFA ?? production,
+    requireEmailVerification: e.REQUIRE_EMAIL_VERIFICATION ?? false,
     trustProxy: e.TRUST_PROXY || (production ? 1 : 0),
     webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'client/dist'),
     seedAdminEmail: e.SEED_ADMIN_EMAIL ?? null,
@@ -97,13 +101,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 }
 
-/** Configuration for automated tests: in-memory database, no MFA unless a test turns it on. */
+/** Configuration for automated tests: in-memory database, email verification on, no MFA unless a test turns it on. */
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     ...loadConfig({ NODE_ENV: 'test' } as NodeJS.ProcessEnv),
     pgliteDir: null,
     databaseUrl: null,
     seedDemo: false,
+    requireEmailVerification: true,
     ...overrides,
   };
 }

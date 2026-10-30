@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { ATTEMPT_STATUS_LABELS, type AttemptStatus } from '@lokus/shared';
+import { isEmailConfirmed } from '../auth/routes';
 import type { AppDeps } from '../context';
 import { attempts, candidateProfiles, consentEvents, invitations, organizations, resultShares, shareRequests, simulationVersions } from '../db/schema';
 import { SIMULATION_VERSION_ID } from '../db/seed';
@@ -36,7 +37,7 @@ export function candidateRouter(deps: AppDeps): Router {
       .innerJoin(organizations, eq(organizations.id, shareRequests.orgId))
       .where(and(eq(shareRequests.candidateId, userId), eq(shareRequests.status, 'pending')));
     res.json({
-      email_verified: req.auth!.user.emailVerified,
+      email_verified: isEmailConfirmed(deps, req.auth!.user),
       attempts: rows.map(({ a, simTitle, orgName }) => ({
         id: a.id,
         simulation_title: simTitle,
@@ -155,10 +156,10 @@ export function candidateRouter(deps: AppDeps): Router {
     res.json({ ok: true });
   });
 
-  /** Open self-sign-up attempt (talent-pool route). Requires a verified email. */
+  /** Open self-sign-up attempt (talent-pool route). Requires a verified email when REQUIRE_EMAIL_VERIFICATION is on. */
   r.post('/attempts', async (req, res) => {
     parseBody(z.object({ consent: z.literal(true) }), req);
-    if (!req.auth!.user.emailVerified) throw forbidden('email_unverified', 'Confirm your email address before starting an assessment.');
+    if (!isEmailConfirmed(deps, req.auth!.user)) throw forbidden('email_unverified', 'Confirm your email address before starting an assessment.');
     const attempt = await deps.db.transaction((tx) => createAttempt(tx, { candidateId: req.auth!.user.id, simulationVersionId: SIMULATION_VERSION_ID, origin: 'self' }));
     res.status(201).json({ attempt_id: attempt.id });
   });
