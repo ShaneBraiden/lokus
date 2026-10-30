@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { directPassword, findOrCreateAccount } from '../auth/directAccounts';
 import { loadOrgFor, requireOrgOwner, toAuthUser } from '../auth/middleware';
 import { passwordSchema } from '../auth/routes';
 import { createSession } from '../auth/sessions';
@@ -14,7 +15,11 @@ import { normaliseEmail, parseBody, parseParams } from '../lib/http';
 
 const TEAM_INVITE_TTL = 7 * 24 * 60 * 60 * 1000;
 
-/** Creates (or refreshes) a team invitation and emails the link. Used by owners and by Lokus admins onboarding an org. */
+/**
+ * Creates (or refreshes) a team invitation and emails the link. With DIRECT_ACCOUNTS the person joins the team straight
+ * away instead, with a new employer account on the default password if they have none.
+ * Used by owners and by Lokus admins onboarding an org.
+ */
 export async function inviteTeamMember(deps: AppDeps, input: { orgId: string; orgName: string; email: string; role: 'owner' | 'recruiter'; invitedBy: string | null }): Promise<string> {
   const email = normaliseEmail(input.email);
   const [existingUser] = await deps.db.select({ id: users.id, kind: users.kind }).from(users).where(eq(users.email, email));
@@ -24,6 +29,16 @@ export async function inviteTeamMember(deps: AppDeps, input: { orgId: string; or
     if (m) throw conflict('already_member', m.orgId === input.orgId ? 'This person is already a member of your team.' : 'This person already belongs to another organisation.');
   }
   const token = randomToken(32);
+  if (deps.config.directAccounts) {
+    const user = await findOrCreateAccount(deps, { email, name: '', kind: 'employer' });
+    const now = deps.clock.now();
+    const [inv] = await deps.db
+      .insert(orgInvitations)
+      .values({ orgId: input.orgId, email, role: input.role, tokenHash: sha256(token), status: 'accepted', expiresAt: now, invitedBy: input.invitedBy, acceptedAt: now, acceptedBy: user.id })
+      .returning({ id: orgInvitations.id });
+    await deps.db.insert(memberships).values({ userId: user.id, orgId: input.orgId, role: input.role });
+    return inv.id;
+  }
   await deps.db
     .update(orgInvitations)
     .set({ status: 'revoked' })
@@ -77,7 +92,7 @@ export function teamRouter(deps: AppDeps): Router {
     const org = req.auth!.org!;
     const id = await inviteTeamMember(deps, { orgId: org.id, orgName: org.name, email: body.email, role: body.role, invitedBy: req.auth!.user.id });
     await audit(deps.db, req, { action: 'team.invited', targetType: 'org_invitation', targetId: id, orgId: org.id, details: { role: body.role } });
-    res.status(201).json({ id });
+    res.status(201).json({ id, ...directPassword(deps) });
   });
 
   r.post('/members/invitations/:id/revoke', requireOrgOwner, async (req, res) => {

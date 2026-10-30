@@ -15,6 +15,8 @@ export interface Me {
     mfa: { required: boolean; enabled: boolean; verified: boolean };
   };
   org: { id: string; name: string; role: 'owner' | 'recruiter'; status: string } | null;
+  /** Testing phase: new accounts get a shared default password and no emails are sent. */
+  direct_accounts: boolean;
   home: string;
 }
 

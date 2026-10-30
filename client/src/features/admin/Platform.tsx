@@ -106,9 +106,9 @@ export function Orgs() {
   const [name, setName] = useState('');
   const [owner, setOwner] = useState('');
   const create = useMutation({
-    mutationFn: () => http.post('/admin/orgs', { name: name.trim(), owner_email: owner.trim() }),
-    onSuccess: () => {
-      toast.success('Organisation created', `An invitation was emailed to ${owner.trim()}.`);
+    mutationFn: () => http.post<{ default_password?: string }>('/admin/orgs', { name: name.trim(), owner_email: owner.trim() }),
+    onSuccess: (r) => {
+      toast.success('Organisation created', r.default_password ? `${owner.trim()} can sign in now with the password ${r.default_password}` : `An invitation was emailed to ${owner.trim()}.`);
       setOpen(false);
       setName('');
       setOwner('');
@@ -222,9 +222,9 @@ export function Users() {
   const [open, setOpen] = useState(false);
   const [staff, setStaff] = useState({ name: '', email: '', role: 'assessor' });
   const create = useMutation({
-    mutationFn: () => http.post('/admin/staff', staff),
-    onSuccess: () => {
-      toast.success('Staff account created', 'A set-password link was emailed.');
+    mutationFn: () => http.post<{ default_password?: string }>('/admin/staff', staff),
+    onSuccess: (r) => {
+      toast.success('Staff account created', r.default_password ? `${staff.email} can sign in now with the password ${r.default_password}` : 'A set-password link was emailed.');
       setOpen(false);
       void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
     },

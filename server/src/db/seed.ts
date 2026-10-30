@@ -48,10 +48,14 @@ export async function seedPlatform(deps: Pick<AppDeps, 'db' | 'clock' | 'log'>):
 async function ensureUser(
   deps: Pick<AppDeps, 'db' | 'clock'>,
   u: { email: string; name: string; kind: 'candidate' | 'employer' | 'staff'; platformRole?: 'admin' | 'assessor'; password: string },
+  opts: { resetPassword?: boolean } = {},
 ): Promise<string> {
   const email = u.email.toLowerCase();
   const [found] = await deps.db.select({ id: users.id }).from(users).where(eq(users.email, email));
-  if (found) return found.id;
+  if (found) {
+    if (opts.resetPassword) await deps.db.update(users).set({ passwordHash: await hashPassword(u.password) }).where(eq(users.id, found.id));
+    return found.id;
+  }
   const now = deps.clock.now();
   const [created] = await deps.db
     .insert(users)
@@ -78,11 +82,13 @@ export async function seedAdmin(deps: Pick<AppDeps, 'db' | 'clock' | 'log'>, ema
  * an owner, and one candidate. Credentials come from DEV_* variables documented in .env.example.
  */
 export async function seedDemo(deps: Pick<AppDeps, 'db' | 'clock' | 'log'>, env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  const password = env.DEV_DEMO_PASSWORD ?? 'LokusDemo-2026!';
-  await ensureUser(deps, { email: env.DEV_ADMIN_EMAIL ?? 'admin@lokus.local', name: 'Asha Admin', kind: 'staff', platformRole: 'admin', password });
-  await ensureUser(deps, { email: env.DEV_ASSESSOR_EMAIL ?? 'assessor@lokus.local', name: 'Arun Assessor', kind: 'staff', platformRole: 'assessor', password });
-  const ownerId = await ensureUser(deps, { email: env.DEV_EMPLOYER_EMAIL ?? 'employer@lokus.local', name: 'Elena Employer', kind: 'employer', password });
-  await ensureUser(deps, { email: env.DEV_CANDIDATE_EMAIL ?? 'candidate@lokus.local', name: 'Priya Candidate', kind: 'candidate', password });
+  const password = env.DEV_DEMO_PASSWORD ?? 'Lokus@2026';
+  // Keep existing demo accounts in step with DEV_DEMO_PASSWORD when it changes.
+  const reset = { resetPassword: true };
+  await ensureUser(deps, { email: env.DEV_ADMIN_EMAIL ?? 'admin@lokus.local', name: 'Asha Admin', kind: 'staff', platformRole: 'admin', password }, reset);
+  await ensureUser(deps, { email: env.DEV_ASSESSOR_EMAIL ?? 'assessor@lokus.local', name: 'Arun Assessor', kind: 'staff', platformRole: 'assessor', password }, reset);
+  const ownerId = await ensureUser(deps, { email: env.DEV_EMPLOYER_EMAIL ?? 'employer@lokus.local', name: 'Elena Employer', kind: 'employer', password }, reset);
+  await ensureUser(deps, { email: env.DEV_CANDIDATE_EMAIL ?? 'candidate@lokus.local', name: 'Priya Candidate', kind: 'candidate', password }, reset);
   const [org] = await deps.db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, 'northwind-clinical'));
   const orgId =
     org?.id ??

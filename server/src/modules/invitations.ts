@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { ATTEMPT_STATUS_LABELS, type AttemptStatus } from '@lokus/shared';
+import { directPassword, findOrCreateAccount } from '../auth/directAccounts';
 import { passwordSchema } from '../auth/routes';
 import { createSession } from '../auth/sessions';
 import { loadOrgFor, toAuthUser } from '../auth/middleware';
@@ -31,6 +32,28 @@ async function sendInvite(deps: AppDeps, inv: { id: string; email: string; name:
   await deps.db.update(invitations).set({ tokenHash: sha256(token), lastSentAt: deps.clock.now(), expiresAt: new Date(deps.clock.now().getTime() + INVITE_LINK_TTL) }).where(eq(invitations.id, inv.id));
   const [sim] = await deps.db.select({ title: simulationVersions.title }).from(simulationVersions).where(eq(simulationVersions.id, SIMULATION_VERSION_ID));
   await sendEmail(deps, inv.email, emails.candidateInvite({ candidateName: inv.name, orgName, simulationTitle: sim?.title ?? 'a work simulation', url: `${deps.config.appUrl}/invite?token=${token}`, deadline: formatDate(inv.deadlineAt) }));
+}
+
+/** Accepts an invitation for a candidate: a new attempt shared with the employer, or a share request for a live one. */
+async function acceptInvitation(deps: AppDeps, inv: typeof invitations.$inferSelect, userId: string, ip: string | undefined) {
+  const now = deps.clock.now();
+  return deps.db.transaction(async (tx) => {
+    const live = await findLiveAttempt(tx, userId, inv.simulationVersionId);
+    if (live) {
+      // One attempt per version: the employer gets the existing result only if the candidate approves.
+      const [share] = await tx.insert(shareRequests).values({ orgId: inv.orgId, candidateId: userId, attemptId: live.id, invitationId: inv.id }).returning();
+      await tx.update(invitations).set({ status: 'accepted', acceptedAt: now, acceptedBy: userId, attemptId: live.id, shareRequestId: share.id }).where(eq(invitations.id, inv.id));
+      return { attempt_id: live.id, share_request_id: share.id, shared: false };
+    }
+    const attempt = await createAttempt(tx, { candidateId: userId, simulationVersionId: inv.simulationVersionId, origin: 'invite', invitationId: inv.id, deadlineAt: inv.deadlineAt });
+    const [consent] = await tx
+      .insert(consentEvents)
+      .values({ userId, kind: 'result_share', action: 'grant', textVersion: RESULT_SHARE_CONSENT_VERSION, orgId: inv.orgId, attemptId: attempt.id, ip })
+      .returning();
+    await tx.insert(resultShares).values({ attemptId: attempt.id, orgId: inv.orgId, basis: 'invite', consentEventId: consent.id });
+    await tx.update(invitations).set({ status: 'accepted', acceptedAt: now, acceptedBy: userId, attemptId: attempt.id }).where(eq(invitations.id, inv.id));
+    return { attempt_id: attempt.id, share_request_id: null, shared: true };
+  });
 }
 
 /** Status the employer sees for an invitation, without revealing whether the candidate has a prior attempt elsewhere. */
@@ -113,11 +136,17 @@ export function employerInvitationsRouter(deps: AppDeps): Router {
           invitedBy: req.auth!.user.id,
         })
         .returning();
-      await sendInvite(deps, inv, org.name);
+      if (deps.config.directAccounts) {
+        // Testing phase: no email; the candidate account is created (or reused) and the invitation accepted for them.
+        const user = await findOrCreateAccount(deps, { email, name: c.name, kind: 'candidate' });
+        if (user.kind === 'candidate') await acceptInvitation(deps, inv, user.id, req.ip);
+      } else {
+        await sendInvite(deps, inv, org.name);
+      }
       await audit(deps.db, req, { action: 'invitation.created', targetType: 'invitation', targetId: inv.id, orgId: org.id });
       results.push({ email, status: 'invited', id: inv.id });
     }
-    res.status(201).json({ results });
+    res.status(201).json({ results, ...directPassword(deps) });
   });
 
   async function ownInvitation(orgId: string, id: string) {
@@ -210,23 +239,7 @@ export function publicInvitesRouter(deps: AppDeps): Router {
       if (!user.emailVerifiedAt) await deps.db.update(users).set({ emailVerifiedAt: now }).where(eq(users.id, user.id));
     }
 
-    const outcome = await deps.db.transaction(async (tx) => {
-      const live = await findLiveAttempt(tx, user.id, inv.simulationVersionId);
-      if (live) {
-        // One attempt per version: the employer gets the existing result only if the candidate approves.
-        const [share] = await tx.insert(shareRequests).values({ orgId: inv.orgId, candidateId: user.id, attemptId: live.id, invitationId: inv.id }).returning();
-        await tx.update(invitations).set({ status: 'accepted', acceptedAt: now, acceptedBy: user.id, attemptId: live.id, shareRequestId: share.id }).where(eq(invitations.id, inv.id));
-        return { attempt_id: live.id, share_request_id: share.id, shared: false };
-      }
-      const attempt = await createAttempt(tx, { candidateId: user.id, simulationVersionId: inv.simulationVersionId, origin: 'invite', invitationId: inv.id, deadlineAt: inv.deadlineAt });
-      const [consent] = await tx
-        .insert(consentEvents)
-        .values({ userId: user.id, kind: 'result_share', action: 'grant', textVersion: RESULT_SHARE_CONSENT_VERSION, orgId: inv.orgId, attemptId: attempt.id, ip: req.ip })
-        .returning();
-      await tx.insert(resultShares).values({ attemptId: attempt.id, orgId: inv.orgId, basis: 'invite', consentEventId: consent.id });
-      await tx.update(invitations).set({ status: 'accepted', acceptedAt: now, acceptedBy: user.id, attemptId: attempt.id }).where(eq(invitations.id, inv.id));
-      return { attempt_id: attempt.id, share_request_id: null, shared: true };
-    });
+    const outcome = await acceptInvitation(deps, inv, user.id, req.ip);
 
     if (newSession) {
       const sessionId = await createSession(deps, user, req, res);

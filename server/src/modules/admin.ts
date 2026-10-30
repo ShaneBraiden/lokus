@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
+import { directPassword } from '../auth/directAccounts';
 import { sendSetPasswordEmail } from '../auth/routes';
 import { revokeAllSessions } from '../auth/sessions';
 import type { AppDeps } from '../context';
 import { auditLog, memberships, organizations, users } from '../db/schema';
 import { audit } from '../lib/audit';
+import { hashPassword } from '../lib/crypto';
 import { conflict, notFound } from '../lib/errors';
 import { normaliseEmail, parseBody, parseParams, parseQuery } from '../lib/http';
 import { adminAttemptsRouter } from './adminAttempts';
@@ -41,7 +43,7 @@ export function adminRouter(deps: AppDeps): Router {
     res.json({ organizations: rows });
   });
 
-  /** Creates an employer organisation and emails its first owner an invitation. */
+  /** Creates an employer organisation and invites its first owner (or, with DIRECT_ACCOUNTS, adds them straight away). */
   r.post('/orgs', async (req, res) => {
     const body = parseBody(z.object({ name: z.string().trim().min(2).max(120), owner_email: z.email().max(254) }), req);
     let slug = slugify(body.name);
@@ -53,7 +55,7 @@ export function adminRouter(deps: AppDeps): Router {
     const [org] = await deps.db.insert(organizations).values({ name: body.name, slug, createdBy: req.auth!.user.id }).returning();
     await inviteTeamMember(deps, { orgId: org.id, orgName: org.name, email: body.owner_email, role: 'owner', invitedBy: req.auth!.user.id });
     await audit(deps.db, req, { action: 'org.created', targetType: 'organization', targetId: org.id, orgId: org.id, details: { owner_email: normaliseEmail(body.owner_email) } });
-    res.status(201).json({ id: org.id, slug: org.slug });
+    res.status(201).json({ id: org.id, slug: org.slug, ...directPassword(deps) });
   });
 
   r.patch('/orgs/:id', async (req, res) => {
@@ -90,16 +92,20 @@ export function adminRouter(deps: AppDeps): Router {
     res.json({ users: rows.map((u) => ({ ...u, email_verified: Boolean(u.email_verified), mfa_enabled: Boolean(u.mfa_enabled) })) });
   });
 
-  /** Creates a staff account (admin or assessor) and emails a set-password link; TOTP setup follows at first sign-in. */
+  /**
+   * Creates a staff account (admin or assessor) and emails a set-password link, or with DIRECT_ACCOUNTS gives it the
+   * default password. TOTP setup follows at first sign-in.
+   */
   r.post('/staff', async (req, res) => {
     const body = parseBody(z.object({ email: z.email().max(254), name: z.string().trim().min(1).max(120), role: z.enum(['admin', 'assessor']) }), req);
     const email = normaliseEmail(body.email);
     const [existing] = await deps.db.select({ id: users.id }).from(users).where(eq(users.email, email));
     if (existing) throw conflict('email_taken', 'An account with this email already exists.');
-    const [user] = await deps.db.insert(users).values({ email, name: body.name, kind: 'staff', platformRole: body.role }).returning();
-    await sendSetPasswordEmail(deps, user);
+    const direct = deps.config.directAccounts ? { passwordHash: await hashPassword(deps.config.defaultAccountPassword), emailVerifiedAt: deps.clock.now() } : {};
+    const [user] = await deps.db.insert(users).values({ email, name: body.name, kind: 'staff', platformRole: body.role, ...direct }).returning();
+    if (!deps.config.directAccounts) await sendSetPasswordEmail(deps, user);
     await audit(deps.db, req, { action: 'staff.created', targetType: 'user', targetId: user.id, details: { role: body.role } });
-    res.status(201).json({ id: user.id });
+    res.status(201).json({ id: user.id, ...directPassword(deps) });
   });
 
   r.patch('/users/:id', async (req, res) => {

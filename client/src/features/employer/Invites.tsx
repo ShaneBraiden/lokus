@@ -3,6 +3,7 @@ import { FileUp, Mail, RotateCw, Send, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { errorMessage, http } from '@/lib/api';
+import { useMe } from '@/lib/auth';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, PageHeader, PageLoader, Table, Tabs, TabsContent, TabsList, TabsTrigger, TD, TH, THead, TR, Textarea, useToast } from '@/ui';
 import { orgKeys, useInvitations } from './api';
@@ -41,6 +42,7 @@ function InviteForm() {
   const qc = useQueryClient();
   const toast = useToast();
   const settings = useSettings();
+  const direct = useMe().data?.direct_accounts ?? false;
   const [mode, setMode] = useState('single');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,10 +51,12 @@ function InviteForm() {
   const [results, setResults] = useState<InviteResult[] | null>(null);
   const parsed = parseCandidateList(bulk);
   const send = useMutation({
-    mutationFn: (candidates: { name: string; email: string }[]) => http.post<{ results: InviteResult[] }>('/org/invitations', { candidates, ...(days ? { deadline_days: Number(days) } : {}) }),
+    mutationFn: (candidates: { name: string; email: string }[]) =>
+      http.post<{ results: InviteResult[]; default_password?: string }>('/org/invitations', { candidates, ...(days ? { deadline_days: Number(days) } : {}) }),
     onSuccess: (r) => {
       const invited = r.results.filter((x) => x.status === 'invited').length;
-      toast.success(invited ? `${invited} invitation${invited === 1 ? '' : 's'} sent` : 'No new invitations sent');
+      if (invited && r.default_password) toast.success(`${invited} candidate${invited === 1 ? '' : 's'} added`, `New accounts sign in with their email and the password ${r.default_password}`);
+      else toast.success(invited ? `${invited} invitation${invited === 1 ? '' : 's'} sent` : 'No new invitations sent');
       setResults(r.results);
       setName('');
       setEmail('');
@@ -66,7 +70,14 @@ function InviteForm() {
   };
   return (
     <Card>
-      <CardHeader title="Invite candidates" description="Each candidate gets a personal link by email. They choose whether to create an account, and agree that you receive their result." />
+      <CardHeader
+        title="Invite candidates"
+        description={
+          direct
+            ? 'Testing mode: no email is sent. Each candidate gets an account straight away and signs in with their email and the shared test password.'
+            : 'Each candidate gets a personal link by email. They choose whether to create an account, and agree that you receive their result.'
+        }
+      />
       <CardBody className="flex flex-col gap-5">
         {send.error && <Alert tone="danger">{errorMessage(send.error)}</Alert>}
         <Tabs value={mode} onValueChange={setMode}>

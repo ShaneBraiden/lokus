@@ -39,9 +39,10 @@ export function TeamSettings() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invite, setInvite] = useState({ email: '', role: 'recruiter' });
   const sendInvite = useMutation({
-    mutationFn: () => http.post('/org/members/invite', invite),
-    onSuccess: () => {
-      toast.success('Invitation sent', `${invite.email} will receive an email.`);
+    mutationFn: () => http.post<{ default_password?: string }>('/org/members/invite', invite),
+    onSuccess: (r) => {
+      if (r.default_password) toast.success('Member added', `${invite.email} can sign in now with the password ${r.default_password}`);
+      else toast.success('Invitation sent', `${invite.email} will receive an email.`);
       setInviteOpen(false);
       setInvite({ email: '', role: 'recruiter' });
       void qc.invalidateQueries({ queryKey: orgKeys.team });

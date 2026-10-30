@@ -3,7 +3,7 @@ import { PERSONAS } from '../server/src/engine/personas';
 import type { ScenarioAction } from '../server/src/engine/scenario';
 
 /** Local demo accounts seeded in development (documented in .env.example). */
-export const DEMO_PASSWORD = process.env.DEV_DEMO_PASSWORD ?? 'LokusDemo-2026!';
+export const DEMO_PASSWORD = process.env.DEV_DEMO_PASSWORD ?? 'Lokus@2026';
 export const DEMO = {
   admin: 'admin@lokus.local',
   assessor: 'assessor@lokus.local',

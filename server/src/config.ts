@@ -29,6 +29,12 @@ const EnvSchema = z.object({
   REQUIRE_STAFF_MFA: bool,
   /** Require candidates who sign up themselves to confirm their email before starting an assessment. Off by default. */
   REQUIRE_EMAIL_VERIFICATION: bool,
+  /**
+   * Testing phase: invitations, team invites, new organisations and staff accounts create the account straight away
+   * with DEFAULT_ACCOUNT_PASSWORD instead of emailing a link. On by default; turn it off once email delivery is set up.
+   */
+  DIRECT_ACCOUNTS: bool,
+  DEFAULT_ACCOUNT_PASSWORD: z.string().min(10).default('Lokus@2026'),
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   WEB_DIST_DIR: z.string().optional(),
   SEED_ADMIN_EMAIL: z.email().optional(),
@@ -50,6 +56,8 @@ export interface AppConfig {
   emailFrom: string;
   requireStaffMfa: boolean;
   requireEmailVerification: boolean;
+  directAccounts: boolean;
+  defaultAccountPassword: string;
   trustProxy: number;
   webDistDir: string;
   seedAdminEmail: string | null;
@@ -90,6 +98,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     emailFrom: e.EMAIL_FROM,
     requireStaffMfa: e.REQUIRE_STAFF_MFA ?? production,
     requireEmailVerification: e.REQUIRE_EMAIL_VERIFICATION ?? false,
+    directAccounts: e.DIRECT_ACCOUNTS ?? true,
+    defaultAccountPassword: e.DEFAULT_ACCOUNT_PASSWORD,
     trustProxy: e.TRUST_PROXY || (production ? 1 : 0),
     webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'client/dist'),
     seedAdminEmail: e.SEED_ADMIN_EMAIL ?? null,
@@ -101,7 +111,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 }
 
-/** Configuration for automated tests: in-memory database, email verification on, no MFA unless a test turns it on. */
+/** Configuration for automated tests: in-memory database, email verification and emailed invitations on, no MFA unless a test turns it on. */
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     ...loadConfig({ NODE_ENV: 'test' } as NodeJS.ProcessEnv),
@@ -109,6 +119,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     databaseUrl: null,
     seedDemo: false,
     requireEmailVerification: true,
+    directAccounts: false,
     ...overrides,
   };
 }
