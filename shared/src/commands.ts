@@ -125,7 +125,7 @@ export const telemetrySchema = z.object({
 
 /** Lockdown (employer-required proctoring). Strikes are the candidate leaving the assessment; blocked actions never leave it. */
 export const LOCKDOWN_STRIKES = ['tab_hidden', 'window_blur', 'fullscreen_exit', 'devtools', 'multiple_screens', 'second_tab', 'screen_capture'] as const;
-export const LOCKDOWN_BLOCKED = ['copy', 'cut', 'paste', 'context_menu', 'shortcut', 'print', 'drop'] as const;
+export const LOCKDOWN_BLOCKED = ['copy', 'cut', 'paste', 'context_menu', 'shortcut', 'print', 'drop', 'injected_text'] as const;
 export type LockdownViolationKind = (typeof LOCKDOWN_STRIKES)[number] | (typeof LOCKDOWN_BLOCKED)[number];
 /** At this many strikes the attempt is closed. */
 export const LOCKDOWN_STRIKE_LIMIT = 3;

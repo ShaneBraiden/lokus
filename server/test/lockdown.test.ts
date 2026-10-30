@@ -5,7 +5,7 @@ import { createTestContext, makeOrg, PASSWORD, signIn, type TestContext } from '
 let ctx: TestContext;
 let acme: Awaited<ReturnType<typeof signIn>>;
 
-/** Invites a candidate (optionally proctored), accepts and starts Workday 1. */
+/** Invites a candidate, accepts and starts Workday 1. The `lockdown` flag is sent but ignored by the server. */
 async function startInvited(email: string, lockdown: boolean) {
   const sent = await acme.post('/api/org/invitations').send({ candidates: [{ email, name: 'Lock Down' }], lockdown });
   expect(sent.status).toBe(201);
@@ -24,10 +24,10 @@ beforeAll(async () => {
 afterAll(() => ctx.close());
 
 describe('lockdown (proctored) assessments', () => {
-  it('is off unless the employer asks for it, and rejects violations then', async () => {
+  it('is required for every assessment, whatever the invitation asks for', async () => {
     const { agent, base } = await startInvited('free@example.com', false);
-    expect((await agent.get(`${base}/state`)).body.attempt.lockdown).toEqual({ required: false, strikes: 0, limit: LOCKDOWN_STRIKE_LIMIT });
-    expect((await agent.post(`${base}/lockdown/violation`).send({ kind: 'tab_hidden' })).status).toBe(409);
+    expect((await agent.get(`${base}/state`)).body.attempt.lockdown).toEqual({ required: true, strikes: 0, limit: LOCKDOWN_STRIKE_LIMIT });
+    expect((await agent.post(`${base}/lockdown/violation`).send({ kind: 'injected_text' })).body).toMatchObject({ strikes: 0, closed: false });
   });
 
   it('records blocked actions without striking, closes the attempt at the strike limit, and reports it to the employer', async () => {

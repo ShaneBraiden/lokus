@@ -147,12 +147,13 @@
   }
 }
 
-/* Proctored (lockdown) assessments: no text selection outside fields, and nothing to print. */
-.lockdown body {
+/* Workdays: no text selection outside fields. Proctored (lockdown) ones also print nothing. */
+.clipboard-locked body {
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
-.lockdown :is(input, textarea, [contenteditable='true']) {
+.clipboard-locked :is(input, textarea, [contenteditable='true']) {
   user-select: text;
   -webkit-user-select: text;
 }

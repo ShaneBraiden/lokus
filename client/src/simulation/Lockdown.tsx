@@ -4,30 +4,41 @@ import type { LockdownViolationKind } from '@lokus/shared';
 import { api } from '@/lib/api';
 import { Alert, Button } from '@/ui';
 import { base } from './api';
+import { blockedNotice, useClipboardGuard } from './ClipboardGuard';
 import { Brand } from './layout/SimHeader';
 import { usePlayer } from './PlayerContext';
 
+type WebkitDocument = Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null };
+type WebkitElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+
+/** Fullscreen with the older WebKit prefix (iPadOS Safari). iPhone Safari has none at all. */
+const canFullscreen = () => Boolean(document.fullscreenEnabled || (document as WebkitDocument).webkitFullscreenEnabled);
+const fullscreenElement = () => document.fullscreenElement ?? (document as WebkitDocument).webkitFullscreenElement ?? null;
+
+/** Phones and tablets: no developer tools to dock, and the on-screen keyboard reshapes the viewport. */
+const touchDevice = () => window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(any-pointer: fine)').matches;
+
 /** Requests fullscreen from a user gesture. Resolves false where the browser refuses or cannot. */
 export async function enterFullscreen(): Promise<boolean> {
-  if (document.fullscreenElement) return true;
+  if (fullscreenElement()) return true;
+  const el = document.documentElement as WebkitElement;
   try {
-    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-    return true;
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+    else await el.webkitRequestFullscreen?.();
+    return Boolean(fullscreenElement());
   } catch {
     return false;
   }
 }
 
-/** Keys that open browser tools, save, print, view source or copy content. OS-level shortcuts cannot be blocked: they blur the window, which is a strike. */
+/** Keys that open browser tools, save, print or view source (clipboard keys are in the clipboard guard). OS-level shortcuts cannot be blocked: they blur the window, which is a strike. */
 function blockedShortcut(e: KeyboardEvent): string | null {
   const mod = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
   if (key === 'f12') return 'F12';
   if (mod && e.shiftKey && ['i', 'j', 'c', 'k'].includes(key)) return `${e.metaKey ? 'Cmd' : 'Ctrl'}+Shift+${key.toUpperCase()}`;
   if (mod && e.altKey && ['i', 'j', 'c', 'u'].includes(key)) return `${e.metaKey ? 'Cmd' : 'Ctrl'}+Alt+${key.toUpperCase()}`;
-  if (mod && ['c', 'v', 'x', 'p', 's', 'u', 'o', 'n', 't', 'w', 'g', 'f', 'h', 'j', 'l', 'd'].includes(key)) return `${e.metaKey ? 'Cmd' : 'Ctrl'}+${key.toUpperCase()}`;
-  if (e.shiftKey && key === 'insert') return 'Shift+Insert';
-  if (mod && key === 'insert') return 'Ctrl+Insert';
+  if (mod && ['p', 's', 'u', 'o', 'n', 't', 'w', 'g', 'f', 'h', 'j', 'l', 'd'].includes(key)) return `${e.metaKey ? 'Cmd' : 'Ctrl'}+${key.toUpperCase()}`;
   return null;
 }
 
@@ -36,36 +47,36 @@ function blockedShortcut(e: KeyboardEvent): string | null {
  * bottom and change it. Only meaningful while fullscreen (undocked tools blur the window instead).
  */
 const devtoolsOpen = () => {
-  if (!document.fullscreenElement || !screen.width || !screen.height || !window.innerHeight) return false;
+  if (touchDevice() || !fullscreenElement() || !screen.width || !screen.height || !window.innerHeight) return false;
   return Math.abs(window.innerWidth / window.innerHeight / (screen.width / screen.height) - 1) > 0.12;
 };
 
 const extendedScreen = () => (window.screen as Screen & { isExtended?: boolean }).isExtended === true;
 
-type Block = 'fullscreen' | 'away' | 'devtools' | 'screens' | 'second_tab' | 'unsupported';
+type Block = 'fullscreen' | 'away' | 'devtools' | 'screens' | 'second_tab';
 
 const BLOCK_COPY: Record<Block, { title: string; body: string }> = {
-  fullscreen: { title: 'Return to fullscreen to continue', body: 'This assessment is proctored by the employer and runs in fullscreen only.' },
+  fullscreen: { title: 'Return to fullscreen to continue', body: 'This assessment is proctored and runs in fullscreen only.' },
   away: { title: 'You left the assessment', body: 'Switching to another tab, window or app is not allowed during this assessment.' },
   devtools: { title: 'Close the developer tools', body: 'Developer tools are not allowed during this assessment. Close them, then return to fullscreen.' },
   screens: { title: 'Disconnect extra displays', body: 'Only one screen may be connected during this assessment. Disconnect or turn off the other display, then continue.' },
   second_tab: { title: 'The assessment is open in another tab', body: 'You can only work on this assessment in one tab. Close this tab and continue in the other one.' },
-  unsupported: { title: 'Use a desktop browser', body: 'This assessment is proctored and needs fullscreen, which this browser does not allow. Open it in Chrome, Edge or Firefox on a computer.' },
 };
 
 /**
- * Employer-required lockdown for the workdays. Everything the browser allows is blocked (copy, paste, right-click,
- * printing, developer tools, browser shortcuts, text selection, drag and drop). Leaving the assessment cannot be
- * prevented by a web page, so it is detected and covered: the work is hidden until the candidate returns to
- * fullscreen, and each departure is a strike. At the strike limit the server closes the attempt.
+ * Lockdown for every workday, on every device. Everything the browser allows is blocked (copy, paste, text inserted by
+ * extensions, right-click, printing, developer tools, browser shortcuts, text selection, drag and drop). Leaving the
+ * assessment cannot be prevented by a web page, so it is detected and covered: the work is hidden until the candidate
+ * returns, and each departure is a strike. At the strike limit the server closes the attempt. Fullscreen is required
+ * wherever the browser has it; where it has not (iPhone Safari), leaving the tab or app is still a strike.
  */
 export function LockdownGuard({ children }: { children: ReactNode }) {
   const { attemptId, state, refresh } = usePlayer();
   const { limit } = state.attempt.lockdown;
   const [strikes, setStrikes] = useState(state.attempt.lockdown.strikes);
-  const [block, setBlock] = useState<Block | null>(() => (!document.fullscreenEnabled ? 'unsupported' : document.fullscreenElement ? null : 'fullscreen'));
+  const [block, setBlock] = useState<Block | null>(() => (canFullscreen() && !fullscreenElement() ? 'fullscreen' : null));
   const [notice, setNotice] = useState<string | null>(null);
-  /** One strike per departure: set when a strike is reported, cleared once the candidate is back in fullscreen. */
+  /** One strike per departure: set when a strike is reported, cleared once the candidate is back. */
   const away = useRef(false);
   const lastBlocked = useRef(new Map<string, number>());
   const secondary = useRef(false);
@@ -83,7 +94,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
 
   const strike = useCallback(
     (kind: LockdownViolationKind, reason: Block, detail = '') => {
-      setBlock((b) => (b === 'second_tab' || b === 'unsupported' ? b : reason));
+      setBlock((b) => (b === 'second_tab' ? b : reason));
       if (away.current || secondary.current) return;
       away.current = true;
       void report(kind, detail);
@@ -93,7 +104,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
 
   const blocked = useCallback(
     (kind: LockdownViolationKind, detail = '') => {
-      setNotice(kind === 'shortcut' ? `${detail} is disabled during this assessment.` : 'That action is disabled during this assessment.');
+      setNotice(blockedNotice(kind, detail));
       // Blocked actions are recorded, at most once per kind every 10 seconds.
       const now = Date.now();
       if (now - (lastBlocked.current.get(kind) ?? 0) < 10_000) return;
@@ -102,6 +113,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
     },
     [report],
   );
+  useClipboardGuard(blocked);
 
   useEffect(() => {
     if (!notice) return;
@@ -118,22 +130,12 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
     };
     const onBlur = () => strike('window_blur', 'away');
     const onFullscreen = () => {
-      if (!document.fullscreenElement) strike('fullscreen_exit', 'fullscreen');
+      if (!fullscreenElement()) strike('fullscreen_exit', 'fullscreen');
       else if (!devtoolsOpen() && !extendedScreen()) {
         away.current = false;
-        setBlock((b) => (b === 'second_tab' || b === 'unsupported' ? b : null));
+        setBlock((b) => (b === 'second_tab' ? b : null));
       }
     };
-    const stop = (kind: LockdownViolationKind) => (e: Event) => {
-      e.preventDefault();
-      blocked(kind);
-    };
-    const onCopy = stop('copy');
-    const onCut = stop('cut');
-    const onPaste = stop('paste');
-    const onContext = stop('context_menu');
-    const onDrop = stop('drop');
-    const onDragStart = (e: DragEvent) => e.preventDefault();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'PrintScreen') {
         void navigator.clipboard?.writeText('').catch(() => undefined);
@@ -176,12 +178,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('blur', onBlur);
     document.addEventListener('fullscreenchange', onFullscreen);
-    document.addEventListener('copy', onCopy, true);
-    document.addEventListener('cut', onCut, true);
-    document.addEventListener('paste', onPaste, true);
-    document.addEventListener('contextmenu', onContext, true);
-    document.addEventListener('drop', onDrop, true);
-    document.addEventListener('dragstart', onDragStart, true);
+    document.addEventListener('webkitfullscreenchange', onFullscreen);
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('beforeprint', onBeforePrint);
     window.addEventListener('beforeunload', onBeforeUnload);
@@ -192,23 +189,19 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('fullscreenchange', onFullscreen);
-      document.removeEventListener('copy', onCopy, true);
-      document.removeEventListener('cut', onCut, true);
-      document.removeEventListener('paste', onPaste, true);
-      document.removeEventListener('contextmenu', onContext, true);
-      document.removeEventListener('drop', onDrop, true);
-      document.removeEventListener('dragstart', onDragStart, true);
+      document.removeEventListener('webkitfullscreenchange', onFullscreen);
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('beforeprint', onBeforePrint);
       window.removeEventListener('beforeunload', onBeforeUnload);
       if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      else if (fullscreenElement()) (document as WebkitDocument & { webkitExitFullscreen?: () => void }).webkitExitFullscreen?.();
     };
   }, [attemptId, strike, blocked, report]);
 
   const resume = async () => {
     if (devtoolsOpen()) return setBlock('devtools');
     if (extendedScreen()) return setBlock('screens');
-    if (await enterFullscreen()) {
+    if (!canFullscreen() || (await enterFullscreen())) {
       away.current = false;
       setBlock(null);
     }
@@ -226,7 +219,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
         <div role="alertdialog" aria-modal="true" aria-labelledby="lockdown-title" className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-6 bg-canvas px-4 text-center">
           <Brand />
           <div className="flex max-w-md flex-col items-center gap-3">
-            {block === 'screens' || block === 'second_tab' || block === 'unsupported' ? <MonitorX className="size-10 text-danger" /> : <ShieldAlert className="size-10 text-danger" />}
+            {block === 'screens' || block === 'second_tab' ? <MonitorX className="size-10 text-danger" /> : <ShieldAlert className="size-10 text-danger" />}
             <h1 id="lockdown-title" className="text-xl font-semibold text-ink">
               {copy.title}
             </h1>
@@ -235,7 +228,7 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
               Strikes: {strikes} of {limit}. At {limit} strikes the assessment closes and is marked incomplete.
             </p>
           </div>
-          {block !== 'second_tab' && block !== 'unsupported' && (
+          {block !== 'second_tab' && (
             <Button size="lg" onClick={() => void resume()}>
               <Maximize /> Return to the assessment
             </Button>
@@ -264,11 +257,11 @@ function Watermark({ text }: { text: string }) {
   );
 }
 
-/** Shown before each proctored workday starts. */
+/** Shown before each workday starts (all are proctored). */
 export function LockdownNotice({ limit }: { limit: number }) {
   return (
     <Alert tone="warning" title="This workday is proctored">
-      The employer requires lockdown mode. The workday opens in fullscreen; copy, paste, right-click, printing, developer tools and browser shortcuts are disabled. Switching tab or app, leaving fullscreen, a second screen or tab, or a screen capture each count as a strike, and the employer sees them. At {limit} strikes the assessment closes and is marked incomplete. Close other apps and turn off notifications before you start.
+      The workday opens in fullscreen where your device allows it. Copy, paste, text inserted by extensions or other tools, right-click, printing, developer tools and browser shortcuts are disabled. Switching tab or app, leaving fullscreen, a second screen or tab, or a screen capture each count as a strike, and the employer sees them. At {limit} strikes the assessment closes and is marked incomplete. Close other apps and turn off notifications before you start.
     </Alert>
   );
 }

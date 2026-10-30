@@ -137,10 +137,8 @@ export function employerRouter(deps: AppDeps): Router {
     return row;
   }
 
-  /** Lockdown record for a proctored attempt: every violation the player reported, and whether it was a strike. */
+  /** Lockdown record (every workday is proctored): every violation the player reported, and whether it was a strike. */
   async function integrity(a: typeof attempts.$inferSelect) {
-    const [inv] = a.invitationId ? await deps.db.select({ lockdown: invitations.lockdown }).from(invitations).where(eq(invitations.id, a.invitationId)) : [];
-    if (!inv?.lockdown) return { lockdown: false, strikes: 0, limit: LOCKDOWN_STRIKE_LIMIT, closed_by_lockdown: false, violations: [] };
     const violations = (await listEvents(deps.db, a.id))
       .filter((r) => r.eventType === 'lockdown_violation')
       .map((r) => {

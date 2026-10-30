@@ -82,7 +82,8 @@ function Gate() {
   const handle = matches[matches.length - 1]?.handle as ScreenHandle | undefined;
   useInterruptionTelemetry(attemptId, phase === 'workday1' || phase === 'workday2');
   if (handle && !handle.phases.includes(phase)) return <PhaseRedirect />;
-  if (state.attempt.lockdown.required && (phase === 'workday1' || phase === 'workday2'))
+  // Every workday is proctored.
+  if (phase === 'workday1' || phase === 'workday2')
     return (
       <LockdownGuard key={phase}>
         <Outlet />

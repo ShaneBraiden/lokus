@@ -25,6 +25,7 @@ const VIOLATION_LABELS: Record<string, string> = {
   shortcut: 'Shortcut blocked',
   print: 'Print blocked',
   drop: 'Drag and drop blocked',
+  injected_text: 'Inserted text reverted (paste tool or extension)',
 };
 
 function IntegrityCard({ integrity }: { integrity: LockdownIntegrity }) {

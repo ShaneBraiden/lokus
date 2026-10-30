@@ -28,7 +28,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   const form = page.getByRole('region', { name: 'Log a finding' });
   await expect(form.getByLabel('Finding type')).toHaveValue('');
   await form.getByLabel('Finding type').selectOption('Clinical measurement anomaly (BP/Weight/Glucose)');
-  await form.getByLabel('Observed issue').fill('Weight falls 3 kg between Week 4 and Week 8.');
+  await form.getByLabel('Observed issue').pressSequentially('Weight falls 3 kg between Week 4 and Week 8.', { delay: 50 });
   await form.getByRole('button', { name: 'Save finding' }).click();
   await expect(page.getByText('F-001 logged')).toBeVisible();
 
@@ -40,7 +40,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   await esc.getByRole('button', { name: 'To' }).click();
   await page.getByRole('option', { name: /Dr\. Kavita Menon/ }).click();
   await page.keyboard.press('Escape');
-  await esc.getByLabel('What you observed').fill('Dizziness and nausea reported at the Week 8 visit; please assess as a possible adverse event.');
+  await esc.getByLabel('What you observed').pressSequentially('Dizziness and nausea reported at the Week 8 visit; please assess as a possible adverse event.', { delay: 50 });
   await esc.getByRole('button', { name: 'Send escalation' }).click();
   await expect(page.getByText('Safety concern escalated')).toBeVisible();
 
@@ -69,7 +69,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   await page.getByRole('radio', { name: /Decline and route/ }).check();
 
   await page.getByRole('button', { name: 'Reply' }).click();
-  await page.getByLabel('Message').fill('I cannot hold the SAE report; it will be reported within the required timelines. The waiver must go to the Medical Monitor.');
+  await page.getByLabel('Message').pressSequentially('I cannot hold the SAE report; it will be reported within the required timelines. The waiver must go to the Medical Monitor.', { delay: 50 });
   await page.waitForTimeout(2000); // let the draft autosave
 
   // A reload keeps the clock (server-side) and the unsent reply (autosaved draft).

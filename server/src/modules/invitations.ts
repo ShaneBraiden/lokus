@@ -100,7 +100,6 @@ export function employerInvitationsRouter(deps: AppDeps): Router {
       z.object({
         candidates: z.array(z.object({ email: z.email().max(254), name: z.string().trim().max(120).default('') })).min(1).max(200),
         deadline_days: z.number().int().min(1).max(90).optional(),
-        lockdown: z.boolean().default(false),
       }),
       req,
     );
@@ -135,7 +134,7 @@ export function employerInvitationsRouter(deps: AppDeps): Router {
           tokenHash: sha256(randomToken(32)),
           expiresAt: new Date(now.getTime() + INVITE_LINK_TTL),
           deadlineAt: new Date(now.getTime() + deadlineDays * DAY),
-          lockdown: body.lockdown,
+          lockdown: true,
           invitedBy: req.auth!.user.id,
         })
         .returning();
@@ -146,7 +145,7 @@ export function employerInvitationsRouter(deps: AppDeps): Router {
       } else {
         await sendInvite(deps, inv, org.name);
       }
-      await audit(deps.db, req, { action: 'invitation.created', targetType: 'invitation', targetId: inv.id, orgId: org.id, details: { lockdown: body.lockdown } });
+      await audit(deps.db, req, { action: 'invitation.created', targetType: 'invitation', targetId: inv.id, orgId: org.id, details: { lockdown: true } });
       results.push({ email, status: 'invited', id: inv.id });
     }
     res.status(201).json({ results, ...directPassword(deps) });
