@@ -25,7 +25,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   // A finding on the first record from a cell's menu: only the clicked location is prefilled.
   await page.getByRole('button', { name: /^Weight \(kg\), Week 8/ }).click();
   await page.getByRole('menuitem', { name: 'Log finding' }).click();
-  const form = page.getByRole('dialog', { name: 'Log a finding' });
+  const form = page.getByRole('region', { name: 'Log a finding' });
   await expect(form.getByLabel('Finding type')).toHaveValue('');
   await form.getByLabel('Finding type').selectOption('Clinical measurement anomaly (BP/Weight/Glucose)');
   await form.getByLabel('Observed issue').fill('Weight falls 3 kg between Week 4 and Week 8.');

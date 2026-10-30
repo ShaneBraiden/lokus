@@ -166,24 +166,31 @@ function ReferencePicker({ value, onChange, references, docTitles }: { value: st
 
 export const NEW_FINDING_DRAFT = 'finding-new';
 
+const LOCATION_KEYS = ['target_type', 'participant_id', 'document_id', 'section_id', 'visit', 'crf_field'] as const;
+
 /**
  * Log or edit a finding. The form starts blank (only the location the candidate clicked is filled in); only the
- * record and the finding type are needed to save.
+ * record and the finding type are needed to save. `variant="inline"` docks it beside the CRF instead of a sheet;
+ * there, a new `presetKey` re-points the location fields without clearing what has been typed.
  */
 export function FindingForm({
-  open,
+  open = true,
   onClose,
   mode,
   preset,
+  presetKey,
   finding,
   restoreDraft,
+  variant = 'sheet',
 }: {
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
   preset?: FindingPreset | null;
+  presetKey?: number;
   finding?: FindingDTO;
   restoreDraft?: boolean;
+  variant?: 'sheet' | 'inline';
 }) {
   const { attemptId, refresh } = usePlayer();
   const toast = useToast();
@@ -192,7 +199,12 @@ export function FindingForm({
   const draft = useDraft<FindingFormValues>(NEW_FINDING_DRAFT);
   const initial = useMemo(() => {
     if (mode === 'edit' && finding) return fromFinding(finding);
-    if (restoreDraft) return { ...EMPTY, ...draft.read() };
+    if (restoreDraft) {
+      const restored = { ...EMPTY, ...draft.read() };
+      if (!presetKey) return restored;
+      const at = fromPreset(preset ?? null);
+      return { ...restored, ...Object.fromEntries(LOCATION_KEYS.map((k) => [k, at[k]])) };
+    }
     return fromPreset(preset ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -211,6 +223,16 @@ export function FindingForm({
   useEffect(() => {
     if (isHeaderField(crfField)) form.setValue('visit', 'NA');
   }, [crfField, form]);
+
+  // Inline: a cell picked on the CRF moves the form's location there, keeping the text already written.
+  const [appliedKey, setAppliedKey] = useState(presetKey);
+  useEffect(() => {
+    if (presetKey === appliedKey) return;
+    setAppliedKey(presetKey);
+    const next = fromPreset(preset ?? null);
+    for (const k of LOCATION_KEYS) form.setValue(k, next[k], { shouldDirty: true });
+    form.setFocus('finding_type');
+  }, [presetKey, appliedKey, preset, form]);
 
   const save = useMutation({
     mutationFn: (v: FindingFormValues) => {
@@ -240,25 +262,21 @@ export function FindingForm({
   const header = mode === 'edit' && finding ? `Edit ${finding.id}` : 'Log a finding';
   const fixedTarget = mode === 'edit' && finding ? targetLabel(finding.target, docList) : null;
 
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(o) => !o && cancel()}
-      title={header}
-      description={fixedTarget ?? 'Record what you found on a participant record or a study document.'}
-      width="max-w-2xl"
-      footer={
-        <>
-          <Button variant="secondary" onClick={cancel}>
-            Cancel
-          </Button>
-          <Button type="submit" form="finding-form" loading={save.isPending}>
-            {mode === 'edit' ? 'Save changes' : 'Save finding'}
-          </Button>
-        </>
-      }
-    >
-      <form id="finding-form" className="flex flex-col gap-5" onSubmit={form.handleSubmit((v) => save.mutate(v))} noValidate>
+  const inline = variant === 'inline';
+  const description = fixedTarget ?? 'Record what you found on a participant record or a study document.';
+  const actions = (
+    <>
+      <Button variant={inline ? 'ghost' : 'secondary'} onClick={cancel}>
+        {inline && mode === 'create' ? 'Clear' : 'Cancel'}
+      </Button>
+      <Button type="submit" form="finding-form" loading={save.isPending}>
+        {mode === 'edit' ? 'Save changes' : 'Save finding'}
+      </Button>
+    </>
+  );
+
+  const body = (
+      <form id="finding-form" className="@container flex flex-col gap-5" onSubmit={form.handleSubmit((v) => save.mutate(v))} noValidate>
         {save.error && <Alert tone="danger">{errorMessage(save.error)}</Alert>}
 
         {mode === 'create' && (
@@ -286,7 +304,7 @@ export function FindingForm({
                 </Select>
               </Field>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 @md:grid-cols-2">
                 <Field label="Document" htmlFor="document_id" error={errors.document_id?.message}>
                   <Select id="document_id" aria-invalid={!!errors.document_id} {...form.register('document_id', { onChange: () => form.setValue('section_id', '') })}>
                     <option value="">Choose a document</option>
@@ -313,7 +331,7 @@ export function FindingForm({
         )}
 
         {targetType === 'participant' && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 @md:grid-cols-2">
             <Field label="CRF field" htmlFor="crf_field">
               <Select id="crf_field" {...form.register('crf_field')}>
                 <option value="">Not specified</option>
@@ -346,7 +364,7 @@ export function FindingForm({
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid gap-4 @md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Field label="Finding type" htmlFor="finding_type" required error={errors.finding_type?.message}>
             <Select id="finding_type" aria-invalid={!!errors.finding_type} {...form.register('finding_type')}>
               <option value="">Choose a type</option>
@@ -379,7 +397,7 @@ export function FindingForm({
         <Field label="Recommended action" htmlFor="action">
           <Textarea id="action" rows={3} {...form.register('action')} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 @md:grid-cols-2">
           <Field label="Status" htmlFor="status">
             <Select id="status" {...form.register('status')}>
               <option value="">Not set</option>
@@ -396,6 +414,27 @@ export function FindingForm({
         </Field>
         {mode === 'edit' && finding && <p className="text-xs text-muted">To log this against a different record, withdraw it and log a new finding.</p>}
       </form>
+  );
+
+  if (inline) {
+    return (
+      <section aria-labelledby="finding-form-title" className="rounded-xl border border-line bg-surface shadow-card">
+        <header className="border-b border-line px-5 pb-3.5 pt-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">{mode === 'edit' ? 'Editing' : 'Document'}</p>
+          <h2 id="finding-form-title" className="font-serif text-xl leading-tight text-ink">
+            {header}
+          </h2>
+          <p className="mt-1 text-[13px] leading-snug text-muted">{mode === 'edit' ? description : 'Pick a value on the printout to point this at it, or fill in the location yourself.'}</p>
+        </header>
+        <div className="px-5 py-4">{body}</div>
+        <footer className="sticky bottom-0 flex justify-end gap-2 rounded-b-xl border-t border-line bg-surface/95 px-5 py-3 backdrop-blur">{actions}</footer>
+      </section>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={(o) => !o && cancel()} title={header} description={description} width="max-w-2xl" footer={actions}>
+      {body}
     </Sheet>
   );
 }

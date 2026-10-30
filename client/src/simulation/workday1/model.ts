@@ -12,10 +12,11 @@ export interface FindingPreset {
   crf_field?: string | null;
 }
 
+/** What the docked finding form on the right is doing. `key` changes each time a new location is picked for it. */
+export type Entry = { mode: 'create'; preset: FindingPreset; key: number } | { mode: 'edit'; finding: FindingDTO };
+
 /** Everything that can be open over the workspace (one at a time). */
 export type Modal =
-  | { kind: 'finding-create'; preset: FindingPreset | null }
-  | { kind: 'finding-edit'; finding: FindingDTO }
   | { kind: 'withdraw'; finding: FindingDTO }
   | { kind: 'edit-value'; cell: Cell }
   | { kind: 'correction'; cell: Cell; current: string }

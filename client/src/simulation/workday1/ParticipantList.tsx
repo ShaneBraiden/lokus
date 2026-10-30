@@ -8,11 +8,14 @@ function statusText(p: ParticipantSummaryDTO) {
   return 'Not reviewed';
 }
 
-/** The 12 records in CRF page order with the candidate's own progress on each. Styling is neutral. */
+/**
+ * The 12 records in CRF page order with the candidate's own progress on each, as the index tabs of the study binder
+ * (a select on small screens). Styling is neutral: the dot only says whether the candidate has decided yet.
+ */
 export function ParticipantList({ participants, selected, onSelect }: { participants: ParticipantSummaryDTO[]; selected: string | null; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <label htmlFor="record-select" className="sr-only">
           Participant record
         </label>
@@ -27,24 +30,26 @@ export function ParticipantList({ participants, selected, onSelect }: { particip
           ))}
         </Select>
       </div>
-      <nav aria-label="Participant records" className="hidden lg:block">
-        <ol className="flex flex-col gap-0.5">
+      <nav aria-label="Participant records" className="hidden md:block">
+        <ol className="flex items-end gap-1 overflow-x-auto px-3 pt-2 [scrollbar-width:thin]">
           {participants.map((p) => {
             const active = p.id === selected;
             return (
-              <li key={p.id}>
+              <li key={p.id} className="shrink-0">
                 <button
                   type="button"
                   onClick={() => onSelect(p.id)}
                   aria-current={active ? 'true' : undefined}
-                  className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors', active ? 'bg-surface shadow-card ring-1 ring-line' : 'hover:bg-surface/70')}
+                  title={`${p.id} — ${statusText(p)}`}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-t-md border border-b-0 px-2.5 text-left transition-all',
+                    active ? 'desk-surface relative z-10 -mb-px border-[#d3cbbf] pb-2.5 pt-2' : 'border-transparent bg-[#efeae2] pb-1.5 pt-1.5 hover:bg-[#e9e3da] hover:pb-2',
+                  )}
                 >
-                  <span className="w-5 shrink-0 text-right text-xs font-medium text-faint tabular">{p.page}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className={cn('block truncate text-sm', active ? 'font-semibold text-ink' : 'font-medium text-ink-2')}>{shortId(p.id)}</span>
-                    <span className="block truncate text-xs text-muted">{statusText(p)}</span>
-                  </span>
-                  <span className={cn('size-2 shrink-0 rounded-full', p.status === 'unreviewed' ? 'border border-line-strong' : 'bg-ink')} aria-hidden />
+                  <span className="font-print text-[10.5px] text-faint tabular">{String(p.page).padStart(2, '0')}</span>
+                  <span className={cn('font-print-label text-[13px]', active ? 'font-bold text-ink' : 'font-semibold text-ink-2')}>{shortId(p.id)}</span>
+                  <span className={cn('size-1.5 shrink-0 rounded-full', p.status === 'unreviewed' ? 'border border-faint' : 'bg-ink')} aria-hidden />
+                  <span className="sr-only">, {statusText(p)}</span>
                 </button>
               </li>
             );
