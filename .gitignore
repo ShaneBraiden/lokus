@@ -5,7 +5,7 @@ playwright-report/
 test-results/
 *.log
 .DS_Store
-.claude/
+.claude
 
 # local data (PGlite dev database, generated reports)
 .data/

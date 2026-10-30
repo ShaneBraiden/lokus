@@ -8,7 +8,7 @@ import { createSession } from '../auth/sessions';
 import { loadOrgFor, toAuthUser } from '../auth/middleware';
 import type { AppDeps } from '../context';
 import { attempts, candidateProfiles, consentEvents, invitations, organizations, resultShares, shareRequests, simulationVersions, users } from '../db/schema';
-import { PRIVACY_VERSION, SIMULATION_VERSION_ID, TERMS_VERSION } from '../db/seed';
+import { PRIVACY_VERSION, SIMULATION_VERSION_ID, TALENT_POOL_CONSENT_VERSION, TERMS_VERSION } from '../db/seed';
 import { audit } from '../lib/audit';
 import { hashPassword, randomToken, sha256 } from '../lib/crypto';
 import { emails, sendEmail } from '../lib/emails';
@@ -230,10 +230,11 @@ export function publicInvitesRouter(deps: AppDeps): Router {
         .insert(users)
         .values({ email: inv.email, name: body.name, kind: 'candidate', passwordHash: await hashPassword(body.password), emailVerifiedAt: now })
         .returning();
-      await deps.db.insert(candidateProfiles).values({ userId: user.id });
+      await deps.db.insert(candidateProfiles).values({ userId: user.id, talentPoolListed: true });
       await deps.db.insert(consentEvents).values([
         { userId: user.id, kind: 'terms', action: 'grant', textVersion: TERMS_VERSION, ip: req.ip },
         { userId: user.id, kind: 'privacy', action: 'grant', textVersion: PRIVACY_VERSION, ip: req.ip },
+        { userId: user.id, kind: 'talent_pool', action: 'grant', textVersion: TALENT_POOL_CONSENT_VERSION, ip: req.ip },
       ]);
       newSession = true;
     } else {

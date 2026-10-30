@@ -18,13 +18,13 @@ interface ShareRequest {
 function TalentPoolCard({ pool }: { pool: Privacy['talent_pool'] }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [confirm, setConfirm] = useState<null | boolean>(null);
+  const [confirm, setConfirm] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const update = useMutation({
-    mutationFn: (listed: boolean) => http.put<{ listed: boolean }>('/candidate/talent-pool', { listed }),
-    onSuccess: (r) => {
-      toast.success(r.listed ? 'You joined the talent pool' : 'You left the talent pool');
-      setConfirm(null);
+    mutationFn: () => http.put<{ listed: boolean }>('/candidate/talent-pool', { listed: true }),
+    onSuccess: () => {
+      toast.success('You joined the talent pool');
+      setConfirm(false);
       setAgreed(false);
       void qc.invalidateQueries({ queryKey: candidateKeys.privacy });
     },
@@ -34,22 +34,17 @@ function TalentPoolCard({ pool }: { pool: Privacy['talent_pool'] }) {
     <Card>
       <CardHeader
         title="Talent pool"
-        description="Let employers on Lokus find the result of the simulation you took on your own."
+        description="Employers on Lokus can find the result of the simulation you took on your own."
         action={pool.listed ? <Badge tone="success" dot>Listed</Badge> : <Badge>Not listed</Badge>}
       />
       <CardBody className="flex flex-col gap-4 text-sm text-ink-2">
         {!pool.eligible ? (
           <p className="text-muted">The talent pool is for results from a simulation you start yourself. Results from an employer&rsquo;s invitation are shared only with that employer.</p>
         ) : pool.listed ? (
-          <>
-            <p>Employers can see your result report, your name, headline, location and email address. You can leave at any time; employers lose access straight away.</p>
-            <Button variant="secondary" className="w-fit" onClick={() => setConfirm(false)}>
-              Leave the talent pool
-            </Button>
-          </>
+          <p>Employers can see your result report, your name, headline, location and email address. Sharing with employers is part of the Lokus terms you agreed to when you created your account.</p>
         ) : (
           <>
-            <p>Your self-started result is private. Join the pool if you would like employers to find you.</p>
+            <p>Your account was created before sharing with employers became part of the terms, so your self-started result is private. Join the pool so employers can find you.</p>
             <Button className="w-fit" onClick={() => setConfirm(true)}>
               <Users /> Join the talent pool
             </Button>
@@ -57,36 +52,30 @@ function TalentPoolCard({ pool }: { pool: Privacy['talent_pool'] }) {
         )}
       </CardBody>
       <Dialog
-        open={confirm !== null}
-        onOpenChange={(o) => !o && setConfirm(null)}
-        title={confirm ? 'Join the talent pool' : 'Leave the talent pool'}
+        open={confirm}
+        onOpenChange={setConfirm}
+        title="Join the talent pool"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirm(null)}>
+            <Button variant="secondary" onClick={() => setConfirm(false)}>
               Cancel
             </Button>
-            <Button onClick={() => update.mutate(Boolean(confirm))} disabled={Boolean(confirm) && !agreed} loading={update.isPending}>
-              {confirm ? 'Join' : 'Leave'}
+            <Button onClick={() => update.mutate()} disabled={!agreed} loading={update.isPending}>
+              Join
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-4 text-sm text-ink-2">
           {update.error && <Alert tone="danger">{errorMessage(update.error)}</Alert>}
-          {confirm ? (
-            <>
-              <p>Employers using Lokus will be able to find you and see:</p>
-              <ul className="list-disc space-y-1 pl-5">
-                <li>the result report for the simulation you took on your own</li>
-                <li>your name, headline and location</li>
-                <li>your email address, so they can contact you</li>
-              </ul>
-              <p>Lokus records your choice. You can leave at any time from this page.</p>
-              <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} label="I agree to share my self-started result with employers on Lokus." description={`Consent text version ${pool.consent_version}`} />
-            </>
-          ) : (
-            <p>Employers will no longer find you or see your self-started result. Employers who invited you keep access to the results of their own invitations.</p>
-          )}
+          <p>Employers using Lokus will be able to find you and see:</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>the result report for the simulation you took on your own</li>
+            <li>your name, headline and location</li>
+            <li>your email address, so they can contact you</li>
+          </ul>
+          <p>Lokus records your choice. Once you join, your listing stays in place while you hold an account.</p>
+          <Checkbox checked={agreed} onChange={(e) => setAgreed(e.target.checked)} label="I agree to share my self-started result with employers on Lokus." description={`Consent text version ${pool.consent_version}`} />
         </div>
       </Dialog>
     </Card>
@@ -206,7 +195,7 @@ export function PrivacySharing() {
   if (privacy.error || !privacy.data) return <Alert tone="danger">{errorMessage(privacy.error)}</Alert>;
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Candidate" title="Privacy & sharing" description="You decide who sees your results. Employers never see a result without a basis you can review here." />
+      <PageHeader eyebrow="Candidate" title="Privacy & sharing" description="Who can see your results, and why. Results you take on your own are shared with employers on Lokus under the terms you agreed to." />
       <TalentPoolCard pool={privacy.data.talent_pool} />
       <RequestsCard />
       <SharesCard shares={privacy.data.shares} />

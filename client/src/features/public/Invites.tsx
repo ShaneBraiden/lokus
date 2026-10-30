@@ -116,6 +116,7 @@ export function AcceptInvite() {
                       <Link to="/legal/terms" target="_blank" className="text-accent underline">
                         terms
                       </Link>
+                      , which include sharing any result you take on your own with employers on Lokus
                     </>
                   ) : null}
                   .

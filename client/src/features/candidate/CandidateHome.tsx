@@ -99,7 +99,7 @@ function StartOwnDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       open={open}
       onOpenChange={onOpenChange}
       title="Take the simulation on your own"
-      description="Your result stays private. You can choose to join the talent pool later so employers can find you."
+      description="Your result is listed in the talent pool so employers on Lokus can find you."
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

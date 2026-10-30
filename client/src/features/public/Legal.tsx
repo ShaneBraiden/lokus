@@ -8,8 +8,8 @@ const SECTIONS = {
     body: [
       ['What we collect', 'Your account details (name, email, password hash), the profile details you add, and everything you do inside a simulation: what you open, the findings, messages and records you write, and when.'],
       ['Why', 'To run the assessment, to score your work against the published rubric, and to let trained Lokus assessors review it. Scoring is automated and deterministic; no AI model scores or reviews your work.'],
-      ['Who sees your result', 'If an employer invited you, that employer sees your result for that invitation. A later employer sees an existing result only if you approve it. If you joined on your own, your result stays private unless you opt in to the talent pool. Candidates never see scores.'],
-      ['Your choices', 'You can leave the talent pool or revoke an employer’s access at any time from Privacy & sharing. Contact us to export or delete your account data.'],
+      ['Who sees your result', 'If an employer invited you, that employer sees your result for that invitation. A later employer sees an existing result only if you approve it. A result from a simulation you start on your own is listed in the Lokus talent pool, where employers on Lokus can see it together with your name, headline, location and email address. We use this information only to show it to employers. Candidates never see scores.'],
+      ['Your choices', 'Being listed in the talent pool is a condition of a candidate account and cannot be turned off. You can revoke an invited employer’s access from Privacy & sharing. Contact us to export or delete your account data; deleting your account removes you from the talent pool.'],
       ['Retention', 'Assessment evidence is kept for as long as it is needed to support hiring decisions made with it, and is protected against alteration.'],
     ],
   },
@@ -19,6 +19,7 @@ const SECTIONS = {
       ['The simulation', 'NorthrSim is fictional training material. Study AHS-DM-026, the organisations and the people in it are invented. Nothing in it is medical advice.'],
       ['Your attempt', 'Complete the assessment yourself, without help from others. Each candidate takes a given simulation version once; Lokus may grant a retake.'],
       ['Confidentiality', 'Do not copy or share the simulation content.'],
+      ['Sharing with employers', 'By creating a candidate account you agree that your assessment data is collected and that the result of any simulation you take on your own, with your name, headline, location and email address, is shown to employers on Lokus through the talent pool. This is part of the service and cannot be switched off while you hold an account. Lokus uses this data only to show it to employers.'],
       ['Accounts', 'Keep your password secure. Lokus staff accounts use two-step sign-in.'],
     ],
   },

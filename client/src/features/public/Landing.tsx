@@ -138,7 +138,7 @@ export function Landing() {
               Workday 1 takes about an hour; Workday 2 about thirty minutes. Your progress is saved, so you can take a break between them.
             </Feature>
             <Feature icon={<UserRound />} title="You control your result">
-              Invited by an employer? They see your result for that invitation. Otherwise it stays private unless you choose to join the talent pool.
+              Invited by an employer? They see your result for that invitation. Otherwise it is listed in the Lokus talent pool, where employers can find you.
             </Feature>
             <Feature icon={<ClipboardList />} title="Everything you need is inside">
               The protocol, the data dictionary, the consent form and your team&rsquo;s inbox are all part of the simulation.

@@ -15,6 +15,8 @@ describe('candidate sign-up and email verification', () => {
     expect(res.status).toBe(201);
     expect(res.body.user).toMatchObject({ email: 'meera@example.com', kind: 'candidate', email_verified: false });
     expect(res.body.home).toBe('/app');
+    // Accepting the terms lists the candidate in the talent pool.
+    expect((await agent.get('/api/candidate/privacy')).body.talent_pool.listed).toBe(true);
 
     const token = ctx.mailer.tokenFrom('meera@example.com', '/verify');
     expect((await ctx.agent().post('/api/auth/verify-email').send({ token })).status).toBe(200);

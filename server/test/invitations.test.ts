@@ -137,16 +137,15 @@ describe('self-sign-up attempts and the talent pool', () => {
     expect((await agent.post('/api/candidate/attempts').send({ consent: true })).body.error.code).toBe('attempt_exists');
   });
 
-  it('records every talent-pool opt-in and opt-out as a consent event', async () => {
+  it('lets an unlisted account join the talent pool as a consent event, and refuses leaving it', async () => {
     const agent = await signIn(ctx, 'self@example.com');
     expect((await agent.get('/api/candidate/privacy')).body.talent_pool).toMatchObject({ listed: false, eligible: true });
     await agent.put('/api/candidate/talent-pool').send({ listed: true });
-    await agent.put('/api/candidate/talent-pool').send({ listed: false });
-    await agent.put('/api/candidate/talent-pool').send({ listed: true });
+    expect((await agent.put('/api/candidate/talent-pool').send({ listed: false })).body.error.code).toBe('talent_pool_required');
     expect((await agent.get('/api/candidate/privacy')).body.talent_pool.listed).toBe(true);
     const user = await userByEmail(ctx, 'self@example.com');
     const rows = await ctx.deps.db.select().from(consentEvents).where(and(eq(consentEvents.userId, user.id), eq(consentEvents.kind, 'talent_pool')));
-    expect(rows.map((r) => r.action)).toEqual(['grant', 'withdraw', 'grant']);
+    expect(rows.map((r) => r.action)).toEqual(['grant']);
   });
 
   it('blocks a self-start when the candidate already holds an invited attempt', async () => {

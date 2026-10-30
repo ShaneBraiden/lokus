@@ -60,7 +60,7 @@ export function AssessmentDetail() {
       <PageHeader
         eyebrow={attempt.org_name ? `Invited by ${attempt.org_name}` : 'Talent pool route'}
         title={attempt.simulation_title}
-        description={attempt.org_name ? `${attempt.org_name} receives your result when you finish.` : 'Your result stays private unless you choose to join the talent pool.'}
+        description={attempt.org_name ? `${attempt.org_name} receives your result when you finish.` : 'Employers on Lokus can find your result through the talent pool.'}
         actions={<Badge tone={STATUS_TONE[attempt.status]}>{attempt.status_label}</Badge>}
       />
 
@@ -73,7 +73,7 @@ export function AssessmentDetail() {
             <div className="flex flex-col gap-2 text-sm text-ink-2">
               <p className="text-base font-semibold text-ink">Submitted {formatDateTime(attempt.t2_submitted_at)}</p>
               <p>Thank you for completing the simulation. Parts of your work are reviewed by trained Lokus assessors, which usually takes a few working days.</p>
-              <p>{attempt.org_name ? `${attempt.org_name} will see your result and contact you about next steps.` : 'Your result is private. If you would like employers to find it, join the talent pool from Privacy & sharing.'} Candidates do not see scores.</p>
+              <p>{attempt.org_name ? `${attempt.org_name} will see your result and contact you about next steps.` : 'Employers on Lokus can find your result through the talent pool; see Privacy & sharing.'} Candidates do not see scores.</p>
               {!attempt.org_name && (
                 <Button asChild variant="secondary" className="mt-2 w-fit">
                   <Link to="/app/privacy">Privacy &amp; sharing</Link>

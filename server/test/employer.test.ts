@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { auditLog } from '../src/db/schema';
+import { auditLog, candidateProfiles } from '../src/db/schema';
 import { recordReviewerRatings } from '../src/services/scoring';
-import { allKeys, createTestContext, makeOrg, makeUser, playPersona, signIn, type TestContext } from './helpers';
+import { allKeys, createTestContext, makeOrg, makeUser, playPersona, signIn, userByEmail, type TestContext } from './helpers';
 
 let ctx: TestContext;
 let acmeAttempt: string;
@@ -123,11 +123,11 @@ describe('talent pool', () => {
     expect(audited).toHaveLength(1);
   });
 
-  it('never lists invited results, and removes a candidate who leaves the pool', async () => {
+  it('never lists invited results, and hides a candidate who is no longer listed', async () => {
     const list = await acme.get('/api/org/talent-pool');
     expect(list.body.candidates.map((c: { attempt_id: string }) => c.attempt_id)).not.toContain(acmeAttempt);
-    const pat = await signIn(ctx, 'pat@example.com');
-    await pat.put('/api/candidate/talent-pool').send({ listed: false });
+    // Candidates cannot leave the pool themselves; this stands in for an account removed by Lokus.
+    await ctx.deps.db.update(candidateProfiles).set({ talentPoolListed: false }).where(eq(candidateProfiles.userId, (await userByEmail(ctx, 'pat@example.com')).id));
     expect((await beta.get(`/api/org/talent-pool/${poolAttempt}`)).status).toBe(404);
     expect((await beta.get('/api/org/talent-pool')).body.candidates).toEqual([]);
   });

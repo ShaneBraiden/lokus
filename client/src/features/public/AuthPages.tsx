@@ -92,7 +92,7 @@ export function SignUp() {
   return (
     <AuthLayout
       title="Create your candidate account"
-      subtitle="Take the Clinical Trial Associate simulation and choose who sees your result."
+      subtitle="Take the Clinical Trial Associate simulation and let employers on Lokus see your result."
       footer={
         <>
           Already have an account?{' '}
@@ -137,6 +137,7 @@ export function SignUp() {
                 </Link>
               </>
             }
+            description="This includes sharing your result report, name, headline, location and email with employers on Lokus."
             {...form.register('accept_terms')}
           />
           {errors.accept_terms && <p className="mt-1.5 text-xs font-medium text-danger">{errors.accept_terms.message}</p>}

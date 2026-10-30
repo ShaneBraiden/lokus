@@ -6,8 +6,10 @@ import { hashPassword } from '../lib/crypto';
 import { answerKeys, candidateProfiles, consentEvents, memberships, organizations, regressionRuns, scoringPackages, simulationVersions, users } from './schema';
 
 export const SIMULATION_VERSION_ID = `${SIMULATION.code}@${SIMULATION.version}`;
-export const TERMS_VERSION = '2026-10';
-export const PRIVACY_VERSION = '2026-10';
+/** Terms v2026-10-30 make employer visibility of self-started results (the talent pool) a condition of a candidate account. */
+export const TERMS_VERSION = '2026-10-30';
+export const PRIVACY_VERSION = '2026-10-30';
+export const TALENT_POOL_CONSENT_VERSION = '2026-10-30';
 
 /** Idempotent platform bootstrap: simulation version, the v1.1 scoring package (published after its regression run). */
 export async function seedPlatform(deps: Pick<AppDeps, 'db' | 'clock' | 'log'>): Promise<void> {

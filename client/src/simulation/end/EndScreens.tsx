@@ -87,7 +87,7 @@ export function Complete() {
       <p>
         {state.attempt.org_name
           ? `${state.attempt.org_name} receives your result and will be in touch about next steps.`
-          : 'Your result is private. If you would like employers to find it, you can join the talent pool from Privacy & sharing on your dashboard.'}{' '}
+          : 'Employers on Lokus can find your result through the talent pool. See Privacy & sharing on your dashboard.'}{' '}
         Candidates do not see scores.
       </p>
     </ScreenFrame>

@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 import { z } from 'zod';
 import type { AppDeps } from '../context';
 import { authTokens, candidateProfiles, consentEvents, users } from '../db/schema';
-import { PRIVACY_VERSION, TERMS_VERSION } from '../db/seed';
+import { PRIVACY_VERSION, TALENT_POOL_CONSENT_VERSION, TERMS_VERSION } from '../db/seed';
 import { audit } from '../lib/audit';
 import { decryptSecret, encryptSecret, hashPassword, randomToken, sha256, verifyPassword } from '../lib/crypto';
 import { emails, sendEmail } from '../lib/emails';
@@ -85,10 +85,12 @@ export function authRouter(deps: AppDeps): Router {
     const [existing] = await deps.db.select({ id: users.id }).from(users).where(eq(users.email, email));
     if (existing) throw conflict('email_taken', 'An account with this email already exists. Sign in instead.');
     const [user] = await deps.db.insert(users).values({ email, name: body.name, kind: 'candidate', passwordHash: await hashPassword(body.password) }).returning();
-    await deps.db.insert(candidateProfiles).values({ userId: user.id });
+    // Accepting the terms lists the candidate in the talent pool; it is recorded as its own consent event.
+    await deps.db.insert(candidateProfiles).values({ userId: user.id, talentPoolListed: true });
     await deps.db.insert(consentEvents).values([
       { userId: user.id, kind: 'terms', action: 'grant', textVersion: TERMS_VERSION, ip: req.ip },
       { userId: user.id, kind: 'privacy', action: 'grant', textVersion: PRIVACY_VERSION, ip: req.ip },
+      { userId: user.id, kind: 'talent_pool', action: 'grant', textVersion: TALENT_POOL_CONSENT_VERSION, ip: req.ip },
     ]);
     if (deps.config.requireEmailVerification) await sendVerificationEmail(deps, user);
     const sessionId = await createSession(deps, user, req, res);

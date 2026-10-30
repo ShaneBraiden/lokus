@@ -5,14 +5,12 @@ import { ATTEMPT_STATUS_LABELS, type AttemptStatus } from '@lokus/shared';
 import { isEmailConfirmed } from '../auth/routes';
 import type { AppDeps } from '../context';
 import { attempts, candidateProfiles, consentEvents, invitations, organizations, resultShares, shareRequests, simulationVersions } from '../db/schema';
-import { SIMULATION_VERSION_ID } from '../db/seed';
+import { SIMULATION_VERSION_ID, TALENT_POOL_CONSENT_VERSION } from '../db/seed';
 import { audit } from '../lib/audit';
 import { conflict, forbidden, notFound } from '../lib/errors';
 import { parseBody, parseParams } from '../lib/http';
 import { createAttempt } from '../services/attempts';
 import { RESULT_SHARE_CONSENT_VERSION } from './invitations';
-
-export const TALENT_POOL_CONSENT_VERSION = '2026-10';
 
 /**
  * Candidate area. Candidates see status only — never scores, ratings, gates or outcomes (workbook Outcome_Rules
@@ -84,9 +82,13 @@ export function candidateRouter(deps: AppDeps): Router {
     });
   });
 
-  /** Opt in or out of the talent pool (self-sign-up results only); every change is an append-only consent event. */
+  /**
+   * Join the talent pool (self-sign-up results only); every change is an append-only consent event. Listing is part of
+   * the terms a candidate accepts, so leaving is refused; accounts from before those terms can still opt in here.
+   */
   r.put('/talent-pool', async (req, res) => {
     const { listed } = parseBody(z.object({ listed: z.boolean() }), req);
+    if (!listed) throw conflict('talent_pool_required', 'Sharing your self-started result with employers is part of the Lokus terms and cannot be turned off.');
     const userId = req.auth!.user.id;
     await deps.db.transaction(async (tx) => {
       await tx
