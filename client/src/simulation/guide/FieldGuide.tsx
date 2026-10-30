@@ -25,7 +25,7 @@ type Run = { mode: 'intro' } | { mode: 'tour' | 'single'; index: number };
 
 /** Our own surfaces carry this class so they never count as "a window is open" (Radix popovers use role="dialog"). */
 const GUIDE_UI = 'guide-ui';
-/** Room taken by the lifted target's surface ring. */
+/** Room around the lifted target: its surface ring, and the edge of the cut-out in the backdrop. */
 const PAD = 10;
 const CARD_W = 344;
 
@@ -137,6 +137,29 @@ function placeCard(rect: DOMRect | null, h: number): CSSProperties {
   if (vw - rect.right - PAD >= w + gap + m) return { left: rect.right + PAD + gap, top: y(rect.top), width: w };
   if (rect.left - PAD >= w + gap + m) return { left: rect.left - PAD - gap - w, top: y(rect.top), width: w };
   return { left: x(rect.right - w - m), top: y(rect.bottom - h - m), width: w };
+}
+
+/**
+ * Dims the page around the lifted target with a rounded cut-out that follows it. The target stays usable (try-it
+ * steps need it); presses on the dimmed page do nothing, so the candidate stays on the step.
+ */
+function Backdrop({ rect }: { rect: DOMRect | null }) {
+  const shade = 'rgb(28 36 48 / 0.5)';
+  if (!rect) return <div className="pointer-events-auto absolute inset-0 animate-fade-in" style={{ background: shade }} />;
+  const t = rect.top - PAD;
+  const l = rect.left - PAD;
+  const r = rect.right + PAD;
+  const b = rect.bottom + PAD;
+  const block = 'pointer-events-auto absolute';
+  return (
+    <>
+      <div className="absolute animate-fade-in rounded-[18px] transition-[top,left,width,height] duration-300 ease-out" style={{ top: t, left: l, width: r - l, height: b - t, boxShadow: `0 0 0 200vmax ${shade}` }} />
+      <div className={block} style={{ top: 0, left: 0, right: 0, height: Math.max(0, t) }} />
+      <div className={block} style={{ top: b, left: 0, right: 0, bottom: 0 }} />
+      <div className={block} style={{ top: t, left: 0, width: Math.max(0, l), height: b - t }} />
+      <div className={block} style={{ top: t, left: r, right: 0, height: b - t }} />
+    </>
+  );
 }
 
 /** Progress as one segment per step: filled once passed, a check once its try-it was done. */
@@ -355,13 +378,14 @@ export function FieldGuide({ tour }: { tour: GuideTour }) {
       {launcher}
       {createPortal(
         <div className="pointer-events-none fixed inset-0 z-[45]">
+          <Backdrop rect={rect} />
           <div
             key={`${run.mode}-${step?.id ?? 'intro'}`}
             ref={cardRef}
             role="dialog"
             aria-modal="false"
             aria-label={step ? step.title : tour.intro.title}
-            className={cn(GUIDE_UI, 'pointer-events-auto absolute animate-scale-in rounded-2xl border border-line bg-surface shadow-pop', !step && 'shadow-[0_30px_80px_-20px_rgb(28_36_48/0.45)]')}
+            className={cn(GUIDE_UI, 'pointer-events-auto absolute animate-scale-in rounded-2xl border border-line bg-surface shadow-pop')}
             style={placeCard(rect, cardH)}
           >
             {card}
