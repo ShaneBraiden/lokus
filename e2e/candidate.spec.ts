@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { DEMO, expectNoScores, signIn } from './helpers';
+import { DEMO, allowFullscreen, expectNoScores, signIn } from './helpers';
 
 const RECORDS = ['DM-206', 'DM-082', 'DM-008', 'DM-220', 'DM-189', 'DM-284', 'DM-598', 'DM-494', 'DM-124', 'DM-022', 'DM-180', 'DM-384'];
 
 test('a candidate completes both workdays in the browser; drafts and the clock survive a reload; no scores are shown', async ({ page }) => {
+  await allowFullscreen(page);
   await signIn(page, DEMO.candidate);
   await expect(page.getByRole('heading', { name: /Welcome, Priya/ })).toBeVisible();
 
@@ -21,6 +22,14 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
   await expect(page.getByText('Section 4 was already approved')).toBeVisible();
   await page.getByRole('button', { name: 'Open the review workspace' }).click();
   await page.getByRole('button', { name: 'I’ll explore myself' }).click();
+
+  // The field guide replays a single step; its try-it completes when the candidate uses the real control.
+  await page.getByRole('button', { name: /^Guide/ }).click();
+  await page.getByRole('button', { name: 'Work straight on the page' }).click();
+  await page.getByRole('button', { name: /^Weight \(kg\), Week 4/ }).click();
+  await expect(page.getByText('Done. That’s all there is to it.')).toBeVisible();
+  await page.getByRole('button', { name: 'Got it' }).click();
+  await expect(page.getByRole('button', { name: /^Guide/ })).toContainText('1/3');
 
   // A finding on the first record from a cell's menu: only the clicked location is prefilled.
   await page.getByRole('button', { name: /^Weight \(kg\), Week 8/ }).click();
@@ -75,6 +84,7 @@ test('a candidate completes both workdays in the browser; drafts and the clock s
 
   // A reload keeps the clock (server-side) and the unsent reply (autosaved draft).
   await page.reload();
+  await page.getByRole('button', { name: 'Return to the assessment' }).click();
   await expect(page.getByRole('timer')).toContainText('left');
   await page.getByRole('button', { name: 'Reply' }).click();
   await expect(page.getByLabel('Message')).toHaveValue(/cannot hold the SAE report/);

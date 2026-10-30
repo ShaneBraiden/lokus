@@ -19,6 +19,29 @@ export async function signIn(page: Page, email: string, password = DEMO_PASSWORD
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 }
 
+/**
+ * Headless browsers cannot enter fullscreen, which every proctored workday requires. This stands in for the
+ * Fullscreen API: each page load starts outside fullscreen (as a real reload does) and `requestFullscreen` succeeds.
+ * The screen is sized to the viewport so the docked-devtools check sees no difference.
+ */
+export async function allowFullscreen(page: Page) {
+  await page.addInitScript(() => {
+    let element: Element | null = null;
+    Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => true, configurable: true });
+    Object.defineProperty(Document.prototype, 'fullscreenElement', { get: () => element, configurable: true });
+    Object.defineProperty(Screen.prototype, 'width', { get: () => window.innerWidth, configurable: true });
+    Object.defineProperty(Screen.prototype, 'height', { get: () => window.innerHeight, configurable: true });
+    Element.prototype.requestFullscreen = async function () {
+      element = document.documentElement;
+      document.dispatchEvent(new Event('fullscreenchange'));
+    };
+    Document.prototype.exitFullscreen = async function () {
+      element = null;
+      document.dispatchEvent(new Event('fullscreenchange'));
+    };
+  });
+}
+
 /** The newest link containing `marker` from the development outbox (emails are never sent in development). */
 export async function linkFromOutbox(request: APIRequestContext, to: string, marker: string): Promise<string> {
   for (let i = 0; i < 20; i++) {

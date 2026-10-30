@@ -195,7 +195,7 @@ export function Workspace() {
           </div>
         </main>
 
-        <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-[7.75rem] xl:max-h-[calc(100dvh-8.5rem)] xl:overflow-y-auto xl:pb-2 xl:pr-1">
+        <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-[7.75rem] xl:max-h-[calc(100dvh-8.5rem)] xl:-mx-3 xl:overflow-y-auto xl:px-3 xl:pb-4">
           <div data-guide="w1-form">
             {entry.mode === 'create' ? (
               <FindingForm key={`new|${selected}|${formRun}`} variant="inline" mode="create" preset={entry.preset} presetKey={entry.key} restoreDraft={restoreDraft} onClose={() => resetEntry()} />

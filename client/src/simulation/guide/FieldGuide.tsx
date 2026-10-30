@@ -25,7 +25,8 @@ type Run = { mode: 'intro' } | { mode: 'tour' | 'single'; index: number };
 
 /** Our own surfaces carry this class so they never count as "a window is open" (Radix popovers use role="dialog"). */
 const GUIDE_UI = 'guide-ui';
-const PAD = 6;
+/** Room taken by the lifted target's surface ring. */
+const PAD = 10;
 const CARD_W = 344;
 
 /** Which steps were tried and whether the walkthrough was offered, kept with autosaved progress (per attempt). */
@@ -67,19 +68,41 @@ interface Frame {
   paused: boolean;
 }
 
-/** Follows the target as the page scrolls, reflows or loads, and pauses while one of the workspace's own windows is open. */
+/** Raises a target off the page: a little larger (less for big panels), with a filled surface if it has none. */
+function lift(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  const scale = Math.min(1.06, Math.max(1.012, 1 + 18 / Math.max(r.width, r.height)));
+  el.style.setProperty('--guide-scale', scale.toFixed(3));
+  el.dataset.guideLift = getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)' ? 'fill' : '';
+}
+
+function drop(el: HTMLElement | null) {
+  if (!el) return;
+  delete el.dataset.guideLift;
+  el.style.removeProperty('--guide-scale');
+}
+
+/** Lifts the target and follows it as the page scrolls, reflows or loads; pauses while one of the workspace's own windows is open. */
 function useFrame(target: string | undefined, active: boolean): Frame {
   const [frame, setFrame] = useState<Frame>({ rect: null, paused: false });
   useEffect(() => {
     if (!active) return;
-    const el = findTarget(target);
-    if (el) {
-      const r = el.getBoundingClientRect();
-      if (r.top < 120 || r.bottom > window.innerHeight - 24) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    let lifted: HTMLElement | null = null;
+    const first = findTarget(target);
+    if (first) {
+      const r = first.getBoundingClientRect();
+      if (r.top < 120 || r.bottom > window.innerHeight - 24) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
     const tick = () => {
       const paused = windowOpen();
-      const r = findTarget(target)?.getBoundingClientRect() ?? null;
+      const el = paused ? null : findTarget(target);
+      // The element can be replaced by a re-render (another record, another view): move the lift with it.
+      if (el !== lifted) {
+        drop(lifted);
+        if (el) lift(el);
+        lifted = el;
+      }
+      const r = el?.getBoundingClientRect() ?? null;
       setFrame((f) => {
         const same = f.paused === paused && (f.rect === r || (f.rect && r && f.rect.x === r.x && f.rect.y === r.y && f.rect.width === r.width && f.rect.height === r.height));
         return same ? f : { rect: r, paused };
@@ -93,6 +116,7 @@ function useFrame(target: string | undefined, active: boolean): Frame {
       clearInterval(timer);
       window.removeEventListener('scroll', tick, true);
       window.removeEventListener('resize', tick);
+      drop(lifted);
     };
   }, [target, active]);
   return frame;
@@ -115,25 +139,6 @@ function placeCard(rect: DOMRect | null, h: number): CSSProperties {
   return { left: x(rect.right - w - m), top: y(rect.bottom - h - m), width: w };
 }
 
-/** Dims everything but the target. The target stays usable (try-it steps need it); presses elsewhere only nudge the card. */
-function Spotlight({ rect, onMiss }: { rect: DOMRect | null; onMiss: () => void }) {
-  const dim = 'pointer-events-auto absolute bg-ink/45 transition-[top,left,width,height] duration-200';
-  if (!rect) return <div className={cn(dim, 'inset-0')} onPointerDown={onMiss} />;
-  const t = Math.max(0, rect.top - PAD);
-  const l = Math.max(0, rect.left - PAD);
-  const r = rect.right + PAD;
-  const b = rect.bottom + PAD;
-  return (
-    <>
-      <div className={dim} style={{ top: 0, left: 0, right: 0, height: t }} onPointerDown={onMiss} />
-      <div className={dim} style={{ top: b, left: 0, right: 0, bottom: 0 }} onPointerDown={onMiss} />
-      <div className={dim} style={{ top: t, left: 0, width: l, height: b - t }} onPointerDown={onMiss} />
-      <div className={dim} style={{ top: t, left: r, right: 0, height: b - t }} onPointerDown={onMiss} />
-      <div className="pointer-events-none absolute animate-pulse-ring rounded-xl ring-2 ring-copper transition-[top,left,width,height] duration-200" style={{ top: t, left: l, width: r - l, height: b - t }} />
-    </>
-  );
-}
-
 /** Progress as one segment per step: filled once passed, a check once its try-it was done. */
 function Segments({ tour, index, tried }: { tour: GuideTour; index: number; tried: (id: string) => boolean }) {
   return (
@@ -146,7 +151,7 @@ function Segments({ tour, index, tried }: { tour: GuideTour; index: number; trie
 }
 
 /**
- * Field guide for a workday: a walkthrough that spotlights the real controls and asks the candidate to try the key
+ * Field guide for a workday: a walkthrough that lifts the real controls off the page and asks the candidate to try the key
  * ones (the step completes when they do), and a Guide button that replays the whole thing or any single step.
  * It explains the interface only, never what to look for.
  */
@@ -154,7 +159,6 @@ export function FieldGuide({ tour }: { tour: GuideTour }) {
   const memory = useGuideMemory(tour.id);
   const [run, setRun] = useState<Run | null>(() => (memory.offered ? null : { mode: 'intro' }));
   const [menuOpen, setMenuOpen] = useState(false);
-  const [nudge, setNudge] = useState(0);
   const [cardH, setCardH] = useState(220);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -351,14 +355,13 @@ export function FieldGuide({ tour }: { tour: GuideTour }) {
       {launcher}
       {createPortal(
         <div className="pointer-events-none fixed inset-0 z-[45]">
-          <Spotlight rect={rect} onMiss={() => setNudge((n) => n + 1)} />
           <div
-            key={`${run.mode}-${step?.id ?? 'intro'}-${nudge}`}
+            key={`${run.mode}-${step?.id ?? 'intro'}`}
             ref={cardRef}
             role="dialog"
             aria-modal="false"
             aria-label={step ? step.title : tour.intro.title}
-            className={cn(GUIDE_UI, 'pointer-events-auto absolute animate-scale-in rounded-2xl border border-line bg-surface shadow-pop', nudge > 0 && 'ring-2 ring-copper/40')}
+            className={cn(GUIDE_UI, 'pointer-events-auto absolute animate-scale-in rounded-2xl border border-line bg-surface shadow-pop', !step && 'shadow-[0_30px_80px_-20px_rgb(28_36_48/0.45)]')}
             style={placeCard(rect, cardH)}
           >
             {card}
