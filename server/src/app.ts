@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
-import { attachAuth, originCheck, requireCandidate, requireEmployer, requireStaff } from './auth/middleware';
+import { attachAuth, originCheck, requireCandidate, requireEmployer, requireStaff, requireVerifiedEmail } from './auth/middleware';
 import { authRouter } from './auth/routes';
 import type { AppDeps } from './context';
 import { apiNotFound, errorHandler } from './lib/errors';
@@ -64,14 +64,17 @@ export function createApp(deps: AppDeps): express.Express {
   app.use('/api/invites', publicInvitesRouter(deps));
   app.use('/api/team-invites', publicTeamInvitesRouter(deps));
   app.use('/api/access-requests', publicAccessRequestsRouter(deps));
+  // Every account confirms its email (REQUIRE_EMAIL_VERIFICATION). The candidate dashboard stays reachable so it can
+  // prompt for the link; starting or playing a simulation does not.
+  const verified = requireVerifiedEmail(deps);
   app.use('/api/candidate', requireCandidate, candidateRouter(deps));
-  app.use('/api/attempts/:attemptId', requireCandidate, playerRouter(deps));
-  app.use('/api/org/invitations', requireEmployer, employerInvitationsRouter(deps));
-  app.use('/api/org', requireEmployer, employerRouter(deps));
-  app.use('/api/org', requireEmployer, teamRouter(deps));
-  app.use('/api/review', requireStaff(deps, ['admin', 'assessor']), reviewRouter(deps));
-  app.use('/api/admin', requireStaff(deps, ['admin']), adminRouter(deps));
-  app.use('/api/admin', requireStaff(deps, ['admin']), adminAccessRequestsRouter(deps));
+  app.use('/api/attempts/:attemptId', requireCandidate, verified, playerRouter(deps));
+  app.use('/api/org/invitations', requireEmployer, verified, employerInvitationsRouter(deps));
+  app.use('/api/org', requireEmployer, verified, employerRouter(deps));
+  app.use('/api/org', requireEmployer, verified, teamRouter(deps));
+  app.use('/api/review', requireStaff(deps, ['admin', 'assessor']), verified, reviewRouter(deps));
+  app.use('/api/admin', requireStaff(deps, ['admin']), verified, adminRouter(deps));
+  app.use('/api/admin', requireStaff(deps, ['admin']), verified, adminAccessRequestsRouter(deps));
   // Development only: the emails the console mailer would have sent (links included), newest first.
   if (deps.config.env === 'development' && deps.mailer instanceof ConsoleMailer) {
     const mailer = deps.mailer;

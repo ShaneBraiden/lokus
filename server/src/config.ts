@@ -27,7 +27,10 @@ const EnvSchema = z.object({
   EMAIL_FROM: z.string().default('Lokus <no-reply@lokus.example>'),
   /** Require TOTP two-factor authentication for Lokus staff (admin, assessor). */
   REQUIRE_STAFF_MFA: bool,
-  /** Require candidates who sign up themselves to confirm their email before starting an assessment. Off by default. */
+  /**
+   * Every account (candidates, employers, staff) confirms its email through an emailed link before using its
+   * dashboard or starting an assessment. On by default whenever RESEND_API_KEY is set.
+   */
   REQUIRE_EMAIL_VERIFICATION: bool,
   /**
    * Testing phase: invitations, team invites, new organisations and staff accounts create the account straight away
@@ -103,7 +106,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     resendApiKey: e.RESEND_API_KEY ?? null,
     emailFrom: e.EMAIL_FROM,
     requireStaffMfa: e.REQUIRE_STAFF_MFA ?? production,
-    requireEmailVerification: e.REQUIRE_EMAIL_VERIFICATION ?? false,
+    requireEmailVerification: e.REQUIRE_EMAIL_VERIFICATION ?? !!e.RESEND_API_KEY,
     directAccounts: e.DIRECT_ACCOUNTS ?? true,
     defaultAccountPassword: e.DEFAULT_ACCOUNT_PASSWORD,
     openTalentPool: e.OPEN_TALENT_POOL ?? true,

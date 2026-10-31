@@ -3,14 +3,16 @@ import type { AppDeps } from '../context';
 import { candidateProfiles, users } from '../db/schema';
 import { hashPassword } from '../lib/crypto';
 import { normaliseEmail } from '../lib/http';
+import { sendVerificationEmail } from './routes';
 import type { UserRow } from './sessions';
 
 /**
  * Testing phase (DIRECT_ACCOUNTS): returns the account for this email, creating it with the shared default password
- * and a confirmed email when there is none. Nothing is emailed.
+ * when there is none. No invitation is emailed; with REQUIRE_EMAIL_VERIFICATION on the new account gets a
+ * confirmation link instead of a confirmed email.
  */
 export async function findOrCreateAccount(
-  deps: Pick<AppDeps, 'db' | 'clock' | 'config'>,
+  deps: AppDeps,
   u: { email: string; name: string; kind: 'candidate' | 'employer' | 'staff'; platformRole?: 'admin' | 'assessor' },
 ): Promise<UserRow> {
   const email = normaliseEmail(u.email);
@@ -24,10 +26,11 @@ export async function findOrCreateAccount(
       kind: u.kind,
       platformRole: u.platformRole ?? null,
       passwordHash: await hashPassword(deps.config.defaultAccountPassword),
-      emailVerifiedAt: deps.clock.now(),
+      emailVerifiedAt: deps.config.requireEmailVerification ? null : deps.clock.now(),
     })
     .returning();
   if (u.kind === 'candidate') await deps.db.insert(candidateProfiles).values({ userId: user.id });
+  if (deps.config.requireEmailVerification) await sendVerificationEmail(deps, user);
   return user;
 }
 

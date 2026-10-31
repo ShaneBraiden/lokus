@@ -34,6 +34,9 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Every account confirms its email through a Resend link before using the platform.
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "true"
       # First admin, created at startup if missing. Remove SEED_ADMIN_PASSWORD after the first sign-in.
       - key: SEED_ADMIN_EMAIL
         sync: false

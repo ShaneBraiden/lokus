@@ -107,6 +107,19 @@ export function requireStaff(deps: Pick<AppDeps, 'config'>, roles: ('admin' | 'a
   };
 }
 
+/** Whether the user counts as confirmed: everyone does while REQUIRE_EMAIL_VERIFICATION is off. */
+export function isEmailConfirmed(deps: Pick<AppDeps, 'config'>, user: { emailVerified: boolean }): boolean {
+  return user.emailVerified || !deps.config.requireEmailVerification;
+}
+
+/** Mounted after the role guards: every account must confirm its email before using its dashboard or the player. */
+export function requireVerifiedEmail(deps: Pick<AppDeps, 'config'>): RequestHandler {
+  return (req, _res, next) => {
+    if (!req.auth) return next(unauthorized());
+    next(isEmailConfirmed(deps, req.auth.user) ? undefined : forbidden('email_unverified', 'Confirm your email address to continue.'));
+  };
+}
+
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /** CSRF defence in depth (cookies are SameSite=Lax): state-changing requests must not come from another origin. */

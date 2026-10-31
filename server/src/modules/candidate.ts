@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { ATTEMPT_STATUS_LABELS, type AttemptStatus } from '@lokus/shared';
-import { isEmailConfirmed } from '../auth/routes';
+import { isEmailConfirmed } from '../auth/middleware';
 import type { AppDeps } from '../context';
 import { attempts, candidateProfiles, consentEvents, invitations, organizations, resultShares, shareRequests, simulationVersions } from '../db/schema';
 import { SIMULATION_VERSION_ID, TALENT_POOL_CONSENT_VERSION } from '../db/seed';

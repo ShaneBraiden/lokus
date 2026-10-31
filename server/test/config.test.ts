@@ -44,3 +44,12 @@ describe('database configuration', () => {
     expect(() => dev({ DATABASE_URL: SUPABASE, DATABASE_SSL_CA: 'not a certificate' })).toThrow(/PEM/);
   });
 });
+
+describe('email configuration', () => {
+  it('requires email verification whenever Resend is set up, unless turned off', () => {
+    expect(dev().requireEmailVerification).toBe(false);
+    expect(dev({ RESEND_API_KEY: 're_test' }).requireEmailVerification).toBe(true);
+    expect(dev({ RESEND_API_KEY: 're_test', REQUIRE_EMAIL_VERIFICATION: 'false' }).requireEmailVerification).toBe(false);
+    expect(dev({ REQUIRE_EMAIL_VERIFICATION: 'true' }).requireEmailVerification).toBe(true);
+  });
+});

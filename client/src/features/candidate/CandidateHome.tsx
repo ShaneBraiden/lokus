@@ -160,7 +160,7 @@ export function CandidateHome() {
             </Button>
           }
         >
-          We sent a link to {me.user.email}. You need a confirmed email to start a simulation on your own.
+          We sent a link to {me.user.email}. You need a confirmed email to start or continue a simulation.
         </Alert>
       )}
 

@@ -10,7 +10,7 @@ const NAV: NavItem[] = [
 
 export function CandidateArea() {
   return (
-    <RequireRole kind="candidate">
+    <RequireRole kind="candidate" allowUnconfirmed>
       <DashboardLayout nav={NAV} area="Candidate" subtitle="Candidate" profileTo="/app/profile" />
     </RequireRole>
   );

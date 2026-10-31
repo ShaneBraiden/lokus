@@ -2,7 +2,7 @@ import { Router, type Request } from 'express';
 import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import { directPassword } from '../auth/directAccounts';
-import { sendSetPasswordEmail } from '../auth/routes';
+import { sendSetPasswordEmail, sendVerificationEmail } from '../auth/routes';
 import { revokeAllSessions } from '../auth/sessions';
 import type { AppDeps } from '../context';
 import { auditLog, memberships, organizations, users } from '../db/schema';
@@ -111,9 +111,12 @@ export function adminRouter(deps: AppDeps): Router {
     const email = normaliseEmail(body.email);
     const [existing] = await deps.db.select({ id: users.id }).from(users).where(eq(users.email, email));
     if (existing) throw conflict('email_taken', 'An account with this email already exists.');
-    const direct = deps.config.directAccounts ? { passwordHash: await hashPassword(deps.config.defaultAccountPassword), emailVerifiedAt: deps.clock.now() } : {};
+    const direct = deps.config.directAccounts
+      ? { passwordHash: await hashPassword(deps.config.defaultAccountPassword), emailVerifiedAt: deps.config.requireEmailVerification ? null : deps.clock.now() }
+      : {};
     const [user] = await deps.db.insert(users).values({ email, name: body.name, kind: 'staff', platformRole: body.role, ...direct }).returning();
     if (!deps.config.directAccounts) await sendSetPasswordEmail(deps, user);
+    else if (deps.config.requireEmailVerification) await sendVerificationEmail(deps, user);
     await audit(deps.db, req, { action: 'staff.created', targetType: 'user', targetId: user.id, details: { role: body.role } });
     res.status(201).json({ id: user.id, ...directPassword(deps) });
   });

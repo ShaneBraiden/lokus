@@ -12,7 +12,7 @@ import { emails, sendEmail } from '../lib/emails';
 import { badRequest, conflict, forbidden, HttpError } from '../lib/errors';
 import { normaliseEmail, parseBody } from '../lib/http';
 import { generateTotpSecret, otpauthUrl, verifyTotp } from '../lib/totp';
-import { loadOrgFor, requireAuth, toAuthUser } from './middleware';
+import { isEmailConfirmed, loadOrgFor, requireAuth, toAuthUser } from './middleware';
 import { clearSessionCookie, createSession, markSessionMfaVerified, revokeAllSessions, revokeSession, type UserRow } from './sessions';
 
 const HOUR = 60 * 60 * 1000;
@@ -47,11 +47,6 @@ export async function sendVerificationEmail(deps: AppDeps, user: { id: string; e
 export async function sendSetPasswordEmail(deps: AppDeps, user: { id: string; email: string; name: string }): Promise<void> {
   const token = await issueToken(deps, user.id, 'reset_password', 48 * HOUR);
   await sendEmail(deps, user.email, emails.setPassword(user.name, `${deps.config.appUrl}/reset?token=${token}`));
-}
-
-/** Whether the user counts as confirmed: everyone does while REQUIRE_EMAIL_VERIFICATION is off. */
-export function isEmailConfirmed(deps: Pick<AppDeps, 'config'>, user: { emailVerified: boolean }): boolean {
-  return user.emailVerified || !deps.config.requireEmailVerification;
 }
 
 /** The signed-in identity as the web app sees it, including where its home dashboard is. */
