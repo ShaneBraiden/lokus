@@ -69,7 +69,12 @@ export function candidateRouter(deps: AppDeps): Router {
   r.get('/privacy', async (req, res) => {
     const userId = req.auth!.user.id;
     const [p] = await deps.db.select().from(candidateProfiles).where(eq(candidateProfiles.userId, userId));
-    const [selfAttempt] = await deps.db.select({ id: attempts.id }).from(attempts).where(and(eq(attempts.candidateId, userId), eq(attempts.origin, 'self')));
+    // While the testing-phase open pool is on, any submitted result is listed, invited ones included.
+    const open = deps.config.openTalentPool;
+    const [poolable] = await deps.db
+      .select({ id: attempts.id })
+      .from(attempts)
+      .where(and(eq(attempts.candidateId, userId), open ? eq(attempts.status, 'submitted') : eq(attempts.origin, 'self')));
     const shares = await deps.db
       .select({ id: resultShares.id, org_name: organizations.name, basis: resultShares.basis, granted_at: resultShares.grantedAt, revoked_at: resultShares.revokedAt })
       .from(resultShares)
@@ -77,7 +82,7 @@ export function candidateRouter(deps: AppDeps): Router {
       .innerJoin(organizations, eq(organizations.id, resultShares.orgId))
       .where(eq(attempts.candidateId, userId));
     res.json({
-      talent_pool: { listed: p?.talentPoolListed ?? false, eligible: Boolean(selfAttempt), consent_version: TALENT_POOL_CONSENT_VERSION },
+      talent_pool: { listed: p?.talentPoolListed ?? false, eligible: Boolean(poolable), all_results: open, consent_version: TALENT_POOL_CONSENT_VERSION },
       shares,
     });
   });

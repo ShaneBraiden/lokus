@@ -34,12 +34,14 @@ function TalentPoolCard({ pool }: { pool: Privacy['talent_pool'] }) {
     <Card>
       <CardHeader
         title="Talent pool"
-        description="Employers on Lokus can find the result of the simulation you took on your own."
+        description={pool.all_results ? 'While Lokus is in testing, employers on Lokus can find every result you submit, including invited ones.' : 'Employers on Lokus can find the result of the simulation you took on your own.'}
         action={pool.listed ? <Badge tone="success" dot>Listed</Badge> : <Badge>Not listed</Badge>}
       />
       <CardBody className="flex flex-col gap-4 text-sm text-ink-2">
         {!pool.eligible ? (
-          <p className="text-muted">The talent pool is for results from a simulation you start yourself. Results from an employer&rsquo;s invitation are shared only with that employer.</p>
+          <p className="text-muted">
+            {pool.all_results ? 'Your result appears in the talent pool once you submit a simulation.' : 'The talent pool is for results from a simulation you start yourself. Results from an employer’s invitation are shared only with that employer.'}
+          </p>
         ) : pool.listed ? (
           <p>Employers can see your result report, your name, headline, location and email address. Sharing with employers is part of the Lokus terms you agreed to when you created your account.</p>
         ) : (

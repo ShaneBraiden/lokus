@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
-import { consentEvents, resultShares } from '../src/db/schema';
+import { candidateProfiles, consentEvents, resultShares } from '../src/db/schema';
+import { TALENT_POOL_CONSENT_VERSION } from '../src/db/seed';
 import { allKeys, createTestContext, makeOrg, makeUser, PASSWORD, signIn, userByEmail, type TestContext } from './helpers';
 
 let ctx: TestContext;
@@ -137,7 +138,19 @@ describe('self-sign-up attempts and the talent pool', () => {
     expect((await agent.post('/api/candidate/attempts').send({ consent: true })).body.error.code).toBe('attempt_exists');
   });
 
+  it('lists every new candidate profile, recording the grant once', async () => {
+    const user = await userByEmail(ctx, 'self@example.com');
+    const agent = await signIn(ctx, 'self@example.com');
+    expect((await agent.get('/api/candidate/privacy')).body.talent_pool.listed).toBe(true);
+    // Saving the profile upserts the existing row, which must not record a second grant.
+    await agent.put('/api/candidate/profile').send({ headline: 'CTA', location: 'Chennai' });
+    const rows = await ctx.deps.db.select().from(consentEvents).where(and(eq(consentEvents.userId, user.id), eq(consentEvents.kind, 'talent_pool')));
+    expect(rows.map((r) => [r.action, r.textVersion])).toEqual([['grant', TALENT_POOL_CONSENT_VERSION]]);
+  });
+
   it('lets an unlisted account join the talent pool as a consent event, and refuses leaving it', async () => {
+    // Stands in for an account Lokus has taken out of the pool.
+    await ctx.deps.db.update(candidateProfiles).set({ talentPoolListed: false }).where(eq(candidateProfiles.userId, (await userByEmail(ctx, 'self@example.com')).id));
     const agent = await signIn(ctx, 'self@example.com');
     expect((await agent.get('/api/candidate/privacy')).body.talent_pool).toMatchObject({ listed: false, eligible: true });
     await agent.put('/api/candidate/talent-pool').send({ listed: true });
@@ -145,7 +158,8 @@ describe('self-sign-up attempts and the talent pool', () => {
     expect((await agent.get('/api/candidate/privacy')).body.talent_pool.listed).toBe(true);
     const user = await userByEmail(ctx, 'self@example.com');
     const rows = await ctx.deps.db.select().from(consentEvents).where(and(eq(consentEvents.userId, user.id), eq(consentEvents.kind, 'talent_pool')));
-    expect(rows.map((r) => r.action)).toEqual(['grant']);
+    // The first grant was recorded when the profile was created.
+    expect(rows.map((r) => r.action)).toEqual(['grant', 'grant']);
   });
 
   it('blocks a self-start when the candidate already holds an invited attempt', async () => {

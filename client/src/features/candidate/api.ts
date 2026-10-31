@@ -21,7 +21,7 @@ export interface CandidateHome {
 }
 
 export interface Privacy {
-  talent_pool: { listed: boolean; eligible: boolean; consent_version: string };
+  talent_pool: { listed: boolean; eligible: boolean; all_results: boolean; consent_version: string };
   shares: { id: string; org_name: string; basis: 'invite' | 'reuse_consent'; granted_at: string; revoked_at: string | null }[];
 }
 

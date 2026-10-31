@@ -35,6 +35,11 @@ const EnvSchema = z.object({
    */
   DIRECT_ACCOUNTS: bool,
   DEFAULT_ACCOUNT_PASSWORD: z.string().min(10).default('Lokus@2026'),
+  /**
+   * Testing phase: the talent pool shows every listed candidate's submitted result, invited ones included, to every
+   * organisation. On by default; turn it off to limit the pool to results from simulations candidates start themselves.
+   */
+  OPEN_TALENT_POOL: bool,
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   WEB_DIST_DIR: z.string().optional(),
   SEED_ADMIN_EMAIL: z.email().optional(),
@@ -58,6 +63,7 @@ export interface AppConfig {
   requireEmailVerification: boolean;
   directAccounts: boolean;
   defaultAccountPassword: string;
+  openTalentPool: boolean;
   trustProxy: number;
   webDistDir: string;
   seedAdminEmail: string | null;
@@ -100,6 +106,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     requireEmailVerification: e.REQUIRE_EMAIL_VERIFICATION ?? false,
     directAccounts: e.DIRECT_ACCOUNTS ?? true,
     defaultAccountPassword: e.DEFAULT_ACCOUNT_PASSWORD,
+    openTalentPool: e.OPEN_TALENT_POOL ?? true,
     trustProxy: e.TRUST_PROXY || (production ? 1 : 0),
     webDistDir: e.WEB_DIST_DIR ? path.resolve(e.WEB_DIST_DIR) : path.resolve(root, 'client/dist'),
     seedAdminEmail: e.SEED_ADMIN_EMAIL ?? null,
@@ -111,7 +118,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 }
 
-/** Configuration for automated tests: in-memory database, email verification and emailed invitations on, no MFA unless a test turns it on. */
+/** Configuration for automated tests: in-memory database, email verification and emailed invitations on, a self-start-only talent pool, no MFA unless a test turns it on. */
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     ...loadConfig({ NODE_ENV: 'test' } as NodeJS.ProcessEnv),
@@ -120,6 +127,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     seedDemo: false,
     requireEmailVerification: true,
     directAccounts: false,
+    openTalentPool: false,
     ...overrides,
   };
 }

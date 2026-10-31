@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { and, desc, eq, ilike, isNull, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AssessmentResult } from '#engine';
@@ -6,7 +6,7 @@ import { ATTEMPT_STATUS_LABELS, LOCKDOWN_STRIKE_LIMIT, type AttemptStatus } from
 import type { AppDeps } from '../context';
 import { assessmentResults, attempts, candidateProfiles, invitations, resultShares, shareRequests, users } from '../db/schema';
 import { audit } from '../lib/audit';
-import { notFound } from '../lib/errors';
+import { HttpError, notFound } from '../lib/errors';
 import { parseParams, parseQuery } from '../lib/http';
 import { listEvents } from '../services/eventStore';
 import { buildEmployerReport, employerResult, type EmployerResult } from '../services/employerReport';
@@ -23,7 +23,8 @@ type Progress = 'invited' | 'not_started' | 'in_progress' | 'submitted' | 'close
 /**
  * Employer area (/api/org, behind requireEmployer). An organisation only ever reaches an attempt through an
  * active result share (its own invitation, or the candidate's approval), or through the talent pool for
- * candidates who opted in. Every result read is audited.
+ * listed candidates (self-started results, or every submitted result while OPEN_TALENT_POOL is on). Every result read
+ * is audited.
  */
 export function employerRouter(deps: AppDeps): Router {
   const r = Router();
@@ -180,7 +181,10 @@ export function employerRouter(deps: AppDeps): Router {
   r.get('/results/:attemptId/report.pdf', async (req, res) => {
     const { attemptId } = parseParams(attemptParam, req);
     const org = orgOf(req);
-    const data = await report(await sharedAttempt(org.id, attemptId));
+    await sendPdf(req, res, org, attemptId, await report(await sharedAttempt(org.id, attemptId)));
+  });
+
+  async function sendPdf(req: Request, res: Response, org: ReturnType<typeof orgOf>, attemptId: string, data: Awaited<ReturnType<typeof report>>) {
     if (!data.result) throw notFound('The report is available once the assessment is submitted.');
     const pdf = await renderReportPdf({ orgName: org.name, generatedAt: deps.clock.now(), ...data, result: data.result, evidence: data.evidence! });
     await audit(deps.db, req, { action: 'result.pdf_downloaded', targetType: 'attempt', targetId: attemptId, orgId: org.id });
@@ -188,9 +192,19 @@ export function employerRouter(deps: AppDeps): Router {
     res.set('Content-Type', 'application/pdf');
     res.set('Content-Disposition', `attachment; filename="lokus-report-${slug}.pdf"`);
     res.send(pdf);
-  });
+  }
 
-  /** Side by side: only the permitted fields, for up to four of this organisation's candidates. */
+  /** A shared attempt, or failing that one in the talent pool; `pool` says which (it picks the report route). */
+  async function visibleAttempt(orgId: string, attemptId: string) {
+    try {
+      return { row: await sharedAttempt(orgId, attemptId), pool: false };
+    } catch (err) {
+      if (!(err instanceof HttpError) || err.status !== 404) throw err;
+      return { row: await poolAttempt(attemptId), pool: true };
+    }
+  }
+
+  /** Side by side: only the permitted fields, for up to four of this organisation's or the talent pool's candidates. */
   r.get('/compare', async (req, res) => {
     const { ids } = parseQuery(z.object({ ids: z.string().max(200) }), req);
     const list = [...new Set(ids.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 4);
@@ -199,22 +213,24 @@ export function employerRouter(deps: AppDeps): Router {
     const org = orgOf(req);
     const out = [];
     for (const id of parsed.data) {
-      const row = await sharedAttempt(org.id, id);
+      const { row, pool } = await visibleAttempt(org.id, id);
       const { result } = await buildEmployerReport(deps, row.a);
-      out.push({ attempt_id: id, name: row.candidate.name, status_label: ATTEMPT_STATUS_LABELS[row.a.status as AttemptStatus], result: row.a.status === 'submitted' || row.a.status === 'closed' ? result : null });
+      out.push({ attempt_id: id, talent_pool: pool, name: row.candidate.name, status_label: ATTEMPT_STATUS_LABELS[row.a.status as AttemptStatus], result: row.a.status === 'submitted' || row.a.status === 'closed' ? result : null });
     }
     await audit(deps.db, req, { action: 'results.compared', targetType: 'attempt', targetId: parsed.data.join(','), orgId: org.id });
     res.json({ candidates: out });
   });
 
-  /** Candidates who took the simulation on their own and opted in to be found. */
+  /** Listed candidates' submitted results: self-started only, unless the testing-phase open pool is on. */
+  const poolScope = () => (deps.config.openTalentPool ? eq(attempts.status, 'submitted') : and(eq(attempts.origin, 'self'), eq(attempts.status, 'submitted')));
+
   async function poolAttempt(attemptId: string) {
     const [row] = await deps.db
       .select({ a: attempts, candidate: { name: users.name, email: users.email }, profile: { headline: candidateProfiles.headline, location: candidateProfiles.location } })
       .from(attempts)
       .innerJoin(users, eq(users.id, attempts.candidateId))
       .innerJoin(candidateProfiles, and(eq(candidateProfiles.userId, attempts.candidateId), eq(candidateProfiles.talentPoolListed, true)))
-      .where(and(eq(attempts.id, attemptId), eq(attempts.origin, 'self'), eq(attempts.status, 'submitted')));
+      .where(and(eq(attempts.id, attemptId), poolScope()));
     if (!row) throw notFound('This candidate is not in the talent pool.');
     return row;
   }
@@ -229,7 +245,7 @@ export function employerRouter(deps: AppDeps): Router {
       .innerJoin(candidateProfiles, and(eq(candidateProfiles.userId, attempts.candidateId), eq(candidateProfiles.talentPoolListed, true)))
       .innerJoin(lv, eq(lv.attemptId, attempts.id))
       .innerJoin(assessmentResults, and(eq(assessmentResults.attemptId, attempts.id), eq(assessmentResults.resultVersion, lv.version)))
-      .where(and(eq(attempts.origin, 'self'), eq(attempts.status, 'submitted'), q.query ? or(ilike(users.name, `%${q.query}%`), ilike(candidateProfiles.headline, `%${q.query}%`), ilike(candidateProfiles.location, `%${q.query}%`)) : undefined))
+      .where(and(poolScope(), q.query ? or(ilike(users.name, `%${q.query}%`), ilike(candidateProfiles.headline, `%${q.query}%`), ilike(candidateProfiles.location, `%${q.query}%`)) : undefined))
       .orderBy(desc(attempts.t2SubmittedAt))
       .limit(200);
     let out = await Promise.all(
@@ -248,6 +264,13 @@ export function employerRouter(deps: AppDeps): Router {
     const row = await poolAttempt(attemptId);
     await audit(deps.db, req, { action: 'talent_pool.viewed', targetType: 'attempt', targetId: attemptId, orgId: orgOf(req).id });
     res.json({ ...(await report(row)), talent_pool: true });
+  });
+
+  r.get('/talent-pool/:attemptId/report.pdf', async (req, res) => {
+    const { attemptId } = parseParams(attemptParam, req);
+    const org = orgOf(req);
+    const data = await report(await poolAttempt(attemptId));
+    await sendPdf(req, res, org, attemptId, data);
   });
 
   return r;

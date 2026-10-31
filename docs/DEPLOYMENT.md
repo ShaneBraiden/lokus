@@ -72,7 +72,9 @@ DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-eu-west-1.pool
 Email verification for self-signed-up candidates is off; set `REQUIRE_EMAIL_VERIFICATION=true` once Resend is set up.
 While testing, `DIRECT_ACCOUNTS` is on by default: invited candidates, team members, new organisation owners and staff
 get an account straight away with `DEFAULT_ACCOUNT_PASSWORD` (`Lokus@2026`) and no email is sent. Set
-`DIRECT_ACCOUNTS=false` before real users arrive.
+`DIRECT_ACCOUNTS=false` before real users arrive. `OPEN_TALENT_POOL` is on by default too: every organisation's talent
+pool lists every candidate's submitted result, invited ones included, so employers can open and compare all of them.
+Set `OPEN_TALENT_POOL=false` to limit the pool to results from simulations candidates start themselves.
 
 3. Deploy. The service (in Frankfurt, see step 1.1) builds the client and the server, runs migrations at startup,
    seeds the platform (simulation version and the published scoring package, after its regression suite passes) and

@@ -168,6 +168,7 @@ export function Candidates() {
 
 interface CompareRow {
   attempt_id: string;
+  talent_pool: boolean;
   name: string;
   status_label: string;
   result: EmployerResult | null;
@@ -186,12 +187,17 @@ export function EmployerCompare() {
             icon={<GitCompare />}
             title="Choose candidates to compare"
             action={
-              <Button asChild>
-                <Link to="/org/candidates">Go to candidates</Link>
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button asChild>
+                  <Link to="/org/candidates">Go to candidates</Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link to="/org/talent-pool">Go to the talent pool</Link>
+                </Button>
+              </div>
             }
           >
-            Tick two to four candidates with a result on the Candidates page.
+            Tick two to four candidates with a result on the Candidates or Talent pool page.
           </EmptyState>
         </Card>
       ) : q.isLoading ? (
@@ -205,7 +211,7 @@ export function EmployerCompare() {
             <Card key={c.attempt_id} className="min-w-0">
               <CardBody className="flex flex-col gap-4">
                 <div>
-                  <Link to={`/org/results/${c.attempt_id}`} className="font-semibold text-ink hover:text-accent">
+                  <Link to={c.talent_pool ? `/org/talent-pool/${c.attempt_id}` : `/org/results/${c.attempt_id}`} className="font-semibold text-ink hover:text-accent">
                     {c.name}
                   </Link>
                   <div className="mt-1.5">

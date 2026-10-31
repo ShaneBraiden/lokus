@@ -1,4 +1,5 @@
-import { Clock, Layers, Mail } from 'lucide-react';
+import { ChevronDown, Clock, Layers, Mail } from 'lucide-react';
+import { useScroll, useTransform } from 'motion/react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { cn } from '@/ui/cn';
@@ -82,7 +83,7 @@ function Notice({ children, className, pin }: { children: ReactNode; className?:
 
 function Wall() {
   return (
-    <Wallpaper className="bg-[#efeae2]">
+    <Wallpaper className="flex min-h-[calc(100svh-4rem)] flex-col justify-center bg-[#efeae2]">
       <div className="mx-auto max-w-4xl px-4 py-24 text-center sm:px-6 sm:py-36">
         <m.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: EASE_OUT }}>
           <p className="font-print text-[12px] uppercase tracking-[0.2em] text-copper">{HERO.eyebrow}</p>
@@ -102,7 +103,32 @@ function Wall() {
           </div>
         </m.div>
       </div>
+      <ScrollCue />
     </Wallpaper>
+  );
+}
+
+/** A small nudge at the fold: a gently bobbing arrow that fades once the visitor starts scrolling. */
+function ScrollCue() {
+  const { scrollY } = useScroll();
+  const opacity = useTransform(scrollY, [0, 160], [1, 0]);
+  return (
+    <m.div style={{ opacity }} className="absolute inset-x-0 bottom-6 flex justify-center">
+      <m.button
+        type="button"
+        aria-label="Scroll to see more"
+        onClick={() => window.scrollBy({ top: window.innerHeight - 64, behavior: 'smooth' })}
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 1, ease: EASE_OUT }}
+        className="flex flex-col items-center gap-1 rounded-full px-3 py-1 font-print text-[11px] uppercase tracking-[0.2em] text-toner/55 hover:text-toner"
+      >
+        Scroll
+        <m.span aria-hidden animate={{ y: [0, 7, 0] }} transition={{ duration: 1.6, delay: 1.6, repeat: Infinity, ease: 'easeInOut' }} className="flex size-8 items-center justify-center rounded-full border border-toner/25 bg-[#f4efe6]/70">
+          <ChevronDown className="size-4" />
+        </m.span>
+      </m.button>
+    </m.div>
   );
 }
 

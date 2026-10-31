@@ -1,6 +1,6 @@
-import { ArrowLeft, Download, Hourglass, Mail, MapPin, Search, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Download, GitCompare, Hourglass, Mail, MapPin, Search, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { errorMessage } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Input, PageHeader, PageLoader } from '@/ui';
@@ -93,17 +93,16 @@ function ReportView({ id, pool }: { id: string; pool: boolean }) {
           </span>
         }
         actions={
-          result &&
-          !pool && (
+          result && (
             <Button asChild variant="secondary">
-              <a href={`/api/org/results/${id}/report.pdf`} download>
+              <a href={pool ? `/api/org/talent-pool/${id}/report.pdf` : `/api/org/results/${id}/report.pdf`} download>
                 <Download /> Download PDF
               </a>
             </Button>
           )
         }
       />
-      {pool && <Alert tone="info">This candidate took the simulation on their own and chose to be found. Your view is recorded; contact them by email if you would like to talk.</Alert>}
+      {pool && <Alert tone="info">This candidate is listed in the Lokus talent pool. Your view is recorded; contact them by email if you would like to talk.</Alert>}
       {integrity && <IntegrityCard integrity={integrity} />}
       {!result || !evidence ? (
         <Card>
@@ -171,12 +170,24 @@ export function PoolReport() {
 }
 
 export function TalentPool() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
   const q = usePool(search);
+  const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length >= 4 ? s : [...s, id]));
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Employer" title="Talent pool" description="Candidates who took the simulation on their own and chose to be found by employers. Every view is recorded." />
+      <PageHeader
+        eyebrow="Employer"
+        title="Talent pool"
+        description="Every candidate listed on Lokus with a submitted result. Open a report, or tick two to four to compare them. Every view is recorded."
+        actions={
+          <Button variant="secondary" disabled={selected.length < 2} onClick={() => navigate(`/org/compare?ids=${selected.join(',')}`)}>
+            <GitCompare /> Compare{selected.length ? ` (${selected.length})` : ''}
+          </Button>
+        }
+      />
       <form
         className="flex gap-3"
         onSubmit={(e) => {
@@ -199,13 +210,13 @@ export function TalentPool() {
       ) : !q.data?.length ? (
         <Card>
           <EmptyState icon={<Search />} title={search ? 'No one matches' : 'The talent pool is empty'}>
-            {search ? 'Try a different search.' : 'Candidates appear here when they opt in after completing the simulation.'}
+            {search ? 'Try a different search.' : 'Candidates appear here once they submit the simulation.'}
           </EmptyState>
         </Card>
       ) : (
         <Stagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {q.data.map((c) => (
-            <StaggerItem key={c.attempt_id}>
+            <StaggerItem key={c.attempt_id} className="relative">
               <Link to={`/org/talent-pool/${c.attempt_id}`} className="block h-full rounded-xl border border-line bg-surface p-5 shadow-card transition-[translate,box-shadow] duration-300 hover:-translate-y-0.5 hover:shadow-pop">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -237,6 +248,10 @@ export function TalentPool() {
                   </p>
                 )}
               </Link>
+              <label className="absolute bottom-4 right-4 flex cursor-pointer items-center gap-1.5 rounded-md bg-surface px-1.5 py-1 text-xs font-medium text-muted hover:text-ink">
+                <input type="checkbox" className="size-4 accent-accent" checked={selected.includes(c.attempt_id)} disabled={!selected.includes(c.attempt_id) && selected.length >= 4} onChange={() => toggle(c.attempt_id)} />
+                Compare
+              </label>
             </StaggerItem>
           ))}
         </Stagger>
