@@ -9,6 +9,7 @@ import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { screenPath } from '../SimulationShell';
 import { shortId, targetLabel } from './model';
 import { Stagger, StaggerItem } from '@/ui/motion';
+import { SceneBackdrop } from '../layout/Backdrop';
 import { W1Header } from './W1Header';
 
 function Stat({ label, value }: { label: string; value: number | string }) {
@@ -43,7 +44,8 @@ export function ReviewSubmit() {
   const incomplete = submit.error instanceof ApiError && submit.error.code === 'review_incomplete' ? ((submit.error.details as { unreviewed?: string[] })?.unreviewed ?? []) : [];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div className="relative isolate flex min-h-dvh flex-col">
+      <SceneBackdrop />
       <W1Header section="Review & submit" />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6">
         <Link to={screenPath(attemptId, 'workspace')} className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">

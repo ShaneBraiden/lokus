@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router';
 import { errorMessage, http } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { Alert, Button } from '@/ui';
-import { CompletionScene, InboxScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { LockdownNotice, enterFullscreen } from '../Lockdown';
@@ -17,7 +16,7 @@ export function Workday1Complete() {
   const navigate = useNavigate();
   return (
     <ScreenFrame
-      visual={<CompletionScene workdays={1} />}
+      hero="office"
       eyebrow="Workday 1 · submitted"
       title="That’s the end of Workday 1"
       actions={
@@ -59,7 +58,7 @@ export function Workday2Intro() {
   });
   return (
     <ScreenFrame
-      visual={<InboxScene />}
+      hero="cro"
       eyebrow="Workday 2 · Wednesday 21 October 2026"
       title="A new morning at Aurous Healthcare"
       actions={

@@ -1,17 +1,17 @@
 import { Clock, Layers, Mail } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { cn } from '@/ui/cn';
 import { Logo } from '@/ui/misc';
 import { EASE_OUT, m } from '@/ui/motion';
 import { AccountKeys, DrawnIcon, Handwriting, Key, Stamp, StampDown, StickyNote, useSeen } from './concepts/materials';
 import { Wallpaper } from './concepts/Wallpaper';
-import { AUDIENCES, BENEFITS, COMPETENCIES, HERO, MISSION, PACKAGE, SIMULATIONS, STATS, STEPS, type Simulation } from './concepts/story';
+import { AUDIENCES, BENEFITS, COMPETENCIES, FIELDS, HERO, MISSION, PACKAGE, SIMULATIONS, STATS, STEPS, type Simulation } from './concepts/story';
 
 /**
- * The landing page (catalogue option 3, "The Workday"), told in the new starter's office and kept spare. A doodle
- * wallpaper of lab and clinic tools runs behind every section; the shelf holds the study binders and the cork board is
- * the jobs board.
+ * The landing page (catalogue option 3, "The Workday"): the front door to every Lokus simulation, told in a staff room
+ * and kept spare. A doodle wallpaper of lab and clinic tools runs behind every section; the shelf holds the paperwork of
+ * healthcare work and the cork board is the jobs board, one posting per simulation.
  */
 export function Landing() {
   return (
@@ -109,13 +109,13 @@ function Wall() {
 /* ---------------------------------------------------------------- the shelf */
 
 /** Flat warm greys with one copper spine, so the row reads as a single quiet shape. */
-const SPINES = ['#5a4f47', '#6e6259', '#b85f43', '#7d7068', '#4f4640'];
+const SPINES = ['#5a4f47', '#6e6259', '#7d7068', '#b85f43', '#665a52', '#4f4640'];
 
 /** Where a catalogue site puts its partner logos: one plain binder spine per document in the package, on a thin shelf. */
 function Shelf() {
   return (
     <Wallpaper tone="dark" className="bg-[#3a312a] px-4 pt-16 sm:px-6">
-      <p className="text-center font-print text-[12px] uppercase tracking-[0.18em] text-white/55">Built from the real paperwork of the role</p>
+      <p className="text-center font-print text-[12px] uppercase tracking-[0.18em] text-white/55">Built from the everyday paperwork of healthcare</p>
       <div className="mx-auto mt-10 flex max-w-3xl items-end justify-center gap-2 sm:gap-3">
         {PACKAGE.map((p, i) => (
           <div key={p} className="flex h-52 w-11 items-start justify-center rounded-t-[4px] pt-5 sm:h-60 sm:w-14" style={{ backgroundColor: SPINES[i] }}>
@@ -132,6 +132,8 @@ function Shelf() {
 
 function JobsBoard() {
   const [ref, seen] = useSeen<HTMLDivElement>('0px 0px -15% 0px');
+  const [field, setField] = useState<string | null>(null);
+  const shown = field ? SIMULATIONS.filter((s) => s.field === field) : SIMULATIONS;
   return (
     <Wallpaper tone="dark" id="simulations" className="scroll-mt-16 bg-[#3a312a] px-4 py-20 sm:px-6">
       <Cork>
@@ -139,19 +141,37 @@ function JobsBoard() {
           <Notice className="mx-auto max-w-xl text-center">
             <p className="font-print text-[11px] uppercase tracking-[0.2em] text-copper">Jobs board</p>
             <h2 className="mt-2 font-serif text-[34px] leading-tight sm:text-[42px]">Explore the simulations</h2>
+            <p className="mt-2 text-[14.5px] leading-relaxed text-ink-2">Roles from across healthcare, each built with people who do the job.</p>
           </Notice>
+          <div role="group" aria-label="Filter by field" className="mt-10 flex flex-wrap justify-center gap-2">
+            {[null, ...FIELDS].map((f) => (
+              <button
+                key={f ?? 'all'}
+                type="button"
+                aria-pressed={field === f}
+                onClick={() => setField(f)}
+                className={cn(
+                  'rounded-full px-3.5 py-1.5 font-print text-[12px] uppercase tracking-[0.12em] shadow-[0_4px_8px_-4px_rgb(0_0_0/0.5)] transition-colors',
+                  field === f ? 'bg-[#1d1f23] text-white' : 'bg-paper/90 text-toner/75 hover:bg-paper',
+                )}
+              >
+                {f ?? 'All fields'}
+              </button>
+            ))}
+          </div>
           <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {SIMULATIONS.map((s, i) => (
+            {shown.map((s, i) => (
               <m.div
                 key={s.code}
                 initial={{ opacity: 0, y: -24 }}
-                animate={seen ? { opacity: 1, y: 0, rotate: [-2, 1.5, -1, 2.5][i] } : undefined}
-                transition={{ delay: 0.15 + i * 0.12, type: 'spring', stiffness: 260, damping: 20 }}
+                animate={seen ? { opacity: 1, y: 0, rotate: [-2, 1.5, -1, 2.5][i % 4] } : undefined}
+                transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 260, damping: 20 }}
               >
                 <Posting sim={s} seen={seen} />
               </m.div>
             ))}
           </div>
+          <p className="mt-12 text-center font-print text-[13px] text-white/75">New simulations are added to the board as they open. Create an account to hear first.</p>
         </div>
       </Cork>
     </Wallpaper>
@@ -166,6 +186,7 @@ function Posting({ sim, seen }: { sim: Simulation; seen: boolean }) {
         <div className="flex h-full flex-col rounded-[2px] border-2 border-dashed border-white/50 bg-white/15 px-5 py-6 text-[#2b2118]">
           <p className="font-print text-[11px] uppercase tracking-[0.18em] opacity-60">{sim.format}</p>
           <p className="mt-2 font-serif text-[22px] leading-tight">{sim.title}</p>
+          <p className="mt-1 font-print text-[11.5px] uppercase tracking-[0.1em] opacity-60">{sim.field}</p>
           <p className="mt-3 text-[14px] leading-relaxed opacity-80">{sim.body}</p>
         </div>
       </div>
@@ -277,7 +298,7 @@ function Pinboard() {
             <m.div {...pinned(0)}>
               <Notice pin="#2563eb">
                 <p className="font-print text-[11px] uppercase tracking-[0.2em] text-copper">For employers</p>
-                <p className="mt-2 font-serif text-[30px] leading-tight">Built for teams hiring in clinical research.</p>
+                <p className="mt-2 font-serif text-[30px] leading-tight">Built for teams hiring in healthcare.</p>
                 <p className="mt-2 font-print text-[12px] text-toner/60">{AUDIENCES.join(' · ')}</p>
                 <ul className="mt-6 flex flex-col gap-4">
                   {BENEFITS.map(({ icon: Icon, title, body }) => (

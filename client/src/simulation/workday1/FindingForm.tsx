@@ -23,6 +23,9 @@ import { base, useDocuments, useReferences } from '../api';
 import { useDraft, usePlayer } from '../PlayerContext';
 import { isHeaderField, targetLabel, type FindingPreset } from './model';
 
+/** Sentinel "finding type": records the participant's "No deviation" decision instead of logging a finding. */
+const NO_DEVIATION = '__no_deviation__';
+
 const schema = z
   .object({
     target_type: z.enum(['participant', 'document']),
@@ -43,6 +46,7 @@ const schema = z
     if (v.target_type === 'participant' && !v.participant_id) ctx.addIssue({ code: 'custom', path: ['participant_id'], message: 'Choose the participant record.' });
     if (v.target_type === 'document' && !v.document_id) ctx.addIssue({ code: 'custom', path: ['document_id'], message: 'Choose the document.' });
     if (v.target_type === 'document' && !v.section_id) ctx.addIssue({ code: 'custom', path: ['section_id'], message: 'Choose the section.' });
+    if (v.finding_type === NO_DEVIATION) return;
     if (v.target_type === 'participant' && v.crf_field && !isHeaderField(v.crf_field) && v.visit === 'NA') ctx.addIssue({ code: 'custom', path: ['visit'], message: 'Choose the visit this field belongs to.' });
   });
 export type FindingFormValues = z.infer<typeof schema>;
@@ -192,7 +196,7 @@ export function FindingForm({
   restoreDraft?: boolean;
   variant?: 'sheet' | 'inline';
 }) {
-  const { attemptId, refresh } = usePlayer();
+  const { attemptId, refresh, state } = usePlayer();
   const toast = useToast();
   const docs = useDocuments(attemptId);
   const refs = useReferences(attemptId);
@@ -210,7 +214,11 @@ export function FindingForm({
   }, []);
   const form = useForm<FindingFormValues>({ resolver: zodResolver(schema), defaultValues: initial });
   const { errors } = form.formState;
-  const [targetType, crfField, documentId] = useWatch({ control: form.control, name: ['target_type', 'crf_field', 'document_id'] });
+  const [targetType, crfField, documentId, participantId, findingType] = useWatch({ control: form.control, name: ['target_type', 'crf_field', 'document_id', 'participant_id', 'finding_type'] });
+  // "No deviation found" sits at the top of the type list; choosing it freezes the rest of the form.
+  const offerNoDeviation = mode === 'create' && targetType === 'participant';
+  const recordHasFindings = (state.t1.participants.find((p) => p.id === participantId)?.finding_ids.length ?? 0) > 0;
+  const noDeviation = offerNoDeviation && findingType === NO_DEVIATION;
 
   // Keep an unsent new finding in autosaved progress so a refresh does not lose it.
   useEffect(() => {
@@ -234,8 +242,17 @@ export function FindingForm({
     form.setFocus('finding_type');
   }, [presetKey, appliedKey, preset, form]);
 
+  // A document target cannot carry the participant decision.
+  useEffect(() => {
+    if (targetType === 'document' && form.getValues('finding_type') === NO_DEVIATION) form.setValue('finding_type', '');
+  }, [targetType, form]);
+
   const save = useMutation({
-    mutationFn: (v: FindingFormValues) => {
+    mutationFn: async (v: FindingFormValues) => {
+      if (v.finding_type === NO_DEVIATION) {
+        await http.put(`${base(attemptId)}/t1/participants/${v.participant_id}/no-deviation`, { recorded: true });
+        return null;
+      }
       const payload = toPayload(v);
       if (mode === 'edit' && finding) {
         const { target: _t, ...changes } = payload;
@@ -246,7 +263,7 @@ export function FindingForm({
     onSuccess: async (f) => {
       if (mode === 'create') draft.clear();
       await refresh();
-      toast.success(mode === 'edit' ? `${f.id} updated` : `${f.id} logged`);
+      toast.success(!f ? 'No deviation recorded' : mode === 'edit' ? `${f.id} updated` : `${f.id} logged`);
       onClose();
     },
   });
@@ -270,7 +287,7 @@ export function FindingForm({
         {inline && mode === 'create' ? 'Clear' : 'Cancel'}
       </Button>
       <Button type="submit" form="finding-form" loading={save.isPending}>
-        {mode === 'edit' ? 'Save changes' : 'Save finding'}
+        {mode === 'edit' ? 'Save changes' : noDeviation ? 'Record no deviation' : 'Save finding'}
       </Button>
     </>
   );
@@ -286,8 +303,8 @@ export function FindingForm({
             </legend>
             <div className="inline-flex w-fit rounded-lg border border-line-strong bg-subtle p-0.5">
               {(['participant', 'document'] as const).map((t) => (
-                <label key={t} className={cn('cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium', targetType === t ? 'bg-surface text-ink shadow-card' : 'text-muted hover:text-ink')}>
-                  <input type="radio" value={t} className="sr-only" {...form.register('target_type')} />
+                <label key={t} className={cn('cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium', targetType === t ? 'bg-surface text-ink shadow-card' : 'text-muted hover:text-ink', noDeviation && t === 'document' && 'pointer-events-none opacity-45')}>
+                  <input type="radio" value={t} className="sr-only" disabled={noDeviation && t === 'document'} {...form.register('target_type')} />
                   {t === 'participant' ? 'Participant record' : 'Study document'}
                 </label>
               ))}
@@ -330,6 +347,43 @@ export function FindingForm({
           </fieldset>
         )}
 
+        <div className="grid gap-4 @md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <Field label="Finding type" htmlFor="finding_type" required error={errors.finding_type?.message}>
+            <Select id="finding_type" aria-invalid={!!errors.finding_type} {...form.register('finding_type')}>
+              <option value="">Choose a type</option>
+              {offerNoDeviation && (
+                <option value={NO_DEVIATION} disabled={recordHasFindings}>
+                  {recordHasFindings ? 'No deviation found (withdraw this record’s findings first)' : 'No deviation found'}
+                </option>
+              )}
+              <optgroup label="Findings">
+                {FINDING_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </optgroup>
+            </Select>
+          </Field>
+          <Field label="Severity" htmlFor="severity">
+            <Select id="severity" disabled={noDeviation} className={cn(noDeviation && 'opacity-45')} {...form.register('severity')}>
+              <option value="">Not set</option>
+              {SEVERITIES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        {noDeviation && (
+          <Alert tone="success" title={`No deviation for ${participantId || 'this record'}`}>
+            You checked this record and have nothing to log. The finding details below don&rsquo;t apply, so they are locked.
+          </Alert>
+        )}
+
+        <fieldset disabled={noDeviation} className={cn('flex min-w-0 flex-col gap-5 transition-opacity', noDeviation && 'pointer-events-none opacity-45')}>
         {targetType === 'participant' && (
           <div className="grid gap-4 @md:grid-cols-2">
             <Field label="CRF field" htmlFor="crf_field">
@@ -364,29 +418,6 @@ export function FindingForm({
           </div>
         )}
 
-        <div className="grid gap-4 @md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-          <Field label="Finding type" htmlFor="finding_type" required error={errors.finding_type?.message}>
-            <Select id="finding_type" aria-invalid={!!errors.finding_type} {...form.register('finding_type')}>
-              <option value="">Choose a type</option>
-              {FINDING_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Severity" htmlFor="severity">
-            <Select id="severity" {...form.register('severity')}>
-              <option value="">Not set</option>
-              {SEVERITIES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-
         <Field label="Reference" htmlFor="reference_codes" hint="Protocol, dictionary or SOP clauses that apply." error={errors.reference_codes?.message}>
           <Controller control={form.control} name="reference_codes" render={({ field }) => <ReferencePicker value={field.value} onChange={field.onChange} references={refs.data ?? []} docTitles={docTitles} />} />
         </Field>
@@ -412,6 +443,7 @@ export function FindingForm({
         <Field label="Query to site" htmlFor="query_text" hint="The wording you would send to the site, if a query is needed.">
           <Textarea id="query_text" rows={4} {...form.register('query_text')} />
         </Field>
+        </fieldset>
         {mode === 'edit' && finding && <p className="text-xs text-muted">To log this against a different record, withdraw it and log a new finding.</p>}
       </form>
   );

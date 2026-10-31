@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Alert, Button } from '@/ui';
 import { base } from './api';
 import { blockedNotice, useClipboardGuard } from './ClipboardGuard';
+import { SceneBackdrop } from './layout/Backdrop';
 import { Brand } from './layout/SimHeader';
 import { usePlayer } from './PlayerContext';
 
@@ -216,7 +217,8 @@ export function LockdownGuard({ children }: { children: ReactNode }) {
       </div>
       <Watermark text={state.candidate.email} />
       {copy && (
-        <div role="alertdialog" aria-modal="true" aria-labelledby="lockdown-title" className="fixed inset-0 z-[1000] flex flex-col items-center justify-center gap-6 bg-canvas px-4 text-center">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="lockdown-title" className="fixed inset-0 z-[1000] flex isolate flex-col items-center justify-center gap-6 px-4 text-center">
+          <SceneBackdrop />
           <Brand />
           <div className="flex max-w-md flex-col items-center gap-3">
             {block === 'screens' || block === 'second_tab' ? <MonitorX className="size-10 text-danger" /> : <ShieldAlert className="size-10 text-danger" />}

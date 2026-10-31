@@ -25,7 +25,7 @@ export function Alert({
 }) {
   const t = tones[tone];
   return (
-    <div role={tone === 'danger' ? 'alert' : 'status'} className={cn('flex gap-3 rounded-lg border px-4 py-3 text-sm text-ink [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0', t.box, className)}>
+    <div role={tone === 'danger' ? 'alert' : 'status'} className={cn('paper flex gap-3 rounded-lg border px-4 py-3 text-sm text-ink [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0', t.box, className)}>
       {t.icon}
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}

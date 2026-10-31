@@ -5,7 +5,6 @@ import { Link, useNavigate } from 'react-router';
 import { errorMessage, http } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import { Alert, Avatar, Button, Field, Textarea } from '@/ui';
-import { CompletionScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { useDraft, usePlayer, useRememberScreen } from '../PlayerContext';
@@ -26,6 +25,7 @@ export function Debrief() {
   const submit = useMutation({ mutationFn: () => http.post(`${base(attemptId)}/reflection`, { text }), onSuccess: done });
   return (
     <ScreenFrame
+      backdrop="cro"
       eyebrow="Workday 2 · finished"
       title="Thank you — that’s the end of Workday 2"
       actions={
@@ -69,7 +69,7 @@ export function Complete() {
   const { state } = usePlayer();
   return (
     <ScreenFrame
-      visual={<CompletionScene workdays={2} />}
+      hero="cro"
       eyebrow="Assessment submitted"
       title="You’ve completed the simulation"
       actions={

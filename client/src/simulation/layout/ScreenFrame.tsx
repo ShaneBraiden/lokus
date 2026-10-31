@@ -1,43 +1,60 @@
 import type { ReactNode } from 'react';
 import { EASE_OUT, m } from '@/ui/motion';
+import { HeroPhoto, SceneBackdrop, type ScenePhoto } from './Backdrop';
 import { SimHeader } from './SimHeader';
 
-/** Narrative screens (overview, welcome, transitions, debrief): an illustrated scene beside a short serif-headed text. */
+/**
+ * Narrative screens (overview, welcome, transitions, debrief). With `hero`, the copy sits directly on a copper-washed
+ * office photograph; without it, the content is centred on a frosted panel over the blurred office.
+ */
 export function ScreenFrame({
-  visual,
+  hero,
+  backdrop = 'office',
   eyebrow,
   title,
   children,
   actions,
   context,
 }: {
-  visual?: ReactNode;
+  hero?: ScenePhoto;
+  backdrop?: ScenePhoto;
   eyebrow?: ReactNode;
   title: ReactNode;
   children: ReactNode;
   actions?: ReactNode;
   context?: ReactNode;
 }) {
+  if (hero) {
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <SimHeader context={context} />
+        <main className="relative isolate flex flex-1 items-center">
+          <HeroPhoto photo={hero} />
+          <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 lg:py-20">
+            <m.div className="on-photo flex max-w-2xl flex-col" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15, ease: EASE_OUT }}>
+              {eyebrow && <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.22em] text-[#f4cfc1] drop-shadow-sm">{eyebrow}</p>}
+              <h1 className="font-serif text-[38px] leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_12px_rgb(0_0_0/0.35)] sm:text-[52px]">{title}</h1>
+              <div className="mt-6 flex flex-col gap-4 text-[16px] leading-relaxed text-ink-2 drop-shadow-[0_1px_6px_rgb(0_0_0/0.2)] sm:text-[17px]">{children}</div>
+              {actions && <div className="mt-9 flex flex-wrap items-center gap-3">{actions}</div>}
+            </m.div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div className="relative isolate flex min-h-dvh flex-col">
+      <SceneBackdrop photo={backdrop} />
       <SimHeader context={context} />
       <main className="flex flex-1 items-center">
-        <div className={`mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:py-16 ${visual ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center' : 'max-w-3xl'}`}>
-          {visual && (
-            <m.div
-              aria-hidden
-              className="relative hidden aspect-[4/5] overflow-hidden rounded-[28px] border border-line bg-surface shadow-card lg:block"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: EASE_OUT }}
-            >
-              <div className="dot-grid absolute inset-0" />
-              <div className="absolute -left-20 -top-24 size-80 rounded-full bg-accent-soft blur-3xl animate-drift" />
-              <div className="absolute -bottom-24 -right-20 size-80 rounded-full bg-[#efe6da] blur-3xl animate-drift [animation-delay:-8s]" />
-              <div className="absolute inset-0">{visual}</div>
-            </m.div>
-          )}
-          <m.div className="flex flex-col" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08, ease: EASE_OUT }}>
+        <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:py-16">
+          <m.div
+            className="flex flex-col rounded-[28px] border border-white/70 bg-surface/85 p-6 shadow-pop backdrop-blur-xl sm:p-10"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.08, ease: EASE_OUT }}
+          >
             {eyebrow && <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent">{eyebrow}</p>}
             <h1 className="font-serif text-[34px] leading-tight tracking-tight text-ink sm:text-[40px]">{title}</h1>
             <div className="mt-5 flex flex-col gap-4 text-[15px] leading-relaxed text-ink-2">{children}</div>

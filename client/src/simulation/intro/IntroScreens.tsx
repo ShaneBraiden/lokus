@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { errorMessage, http } from '@/lib/api';
 import { Alert, Button } from '@/ui';
-import { DocumentsScene, StudyTeamScene } from '@/visuals/SimScenes';
 import { base } from '../api';
 import { ScreenFrame } from '../layout/ScreenFrame';
 import { LockdownNotice, enterFullscreen } from '../Lockdown';
@@ -12,7 +11,7 @@ import { screenPath } from '../SimulationShell';
 
 function DayCard({ label, title, children }: { label: string; title: string; children: string }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
+    <div className="rounded-xl border border-line bg-surface p-4 shadow-card backdrop-blur-md">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="mt-1 font-semibold text-ink">{title}</p>
       <p className="mt-1 text-sm text-muted">{children}</p>
@@ -27,7 +26,7 @@ export function Overview() {
   const navigate = useNavigate();
   return (
     <ScreenFrame
-      visual={<StudyTeamScene candidateName={state.candidate.name} />}
+      hero="office"
       eyebrow="NorthrSim · Clinical Trial Associate"
       title={`Welcome to Aurous Healthcare, ${state.candidate.first_name}`}
       actions={
@@ -73,7 +72,7 @@ export function Workday1Welcome() {
   });
   return (
     <ScreenFrame
-      visual={<DocumentsScene />}
+      hero="office"
       eyebrow="Workday 1 · Tuesday 20 October 2026"
       title="Your first day on the study team"
       actions={

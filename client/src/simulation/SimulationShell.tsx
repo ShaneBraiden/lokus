@@ -6,6 +6,7 @@ import { ApiError, api, errorMessage } from '@/lib/api';
 import { RequireRole } from '@/lib/auth';
 import { Alert, Button, PageLoader } from '@/ui';
 import { base, useAttemptState } from './api';
+import { SceneBackdrop } from './layout/Backdrop';
 import { Brand } from './layout/SimHeader';
 import { LockdownGuard } from './Lockdown';
 import { PlayerProvider, usePlayer } from './PlayerContext';
@@ -38,7 +39,8 @@ export function PhaseRedirect() {
 function PlayerError({ error }: { error: unknown }) {
   const missing = error instanceof ApiError && error.status === 404;
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4">
+    <div className="relative isolate flex min-h-dvh flex-col items-center justify-center gap-6 px-4">
+      <SceneBackdrop />
       <Brand />
       <div className="w-full max-w-md">
         <Alert tone="danger" title={missing ? 'We couldn’t find this assessment' : 'The simulation could not load'}>

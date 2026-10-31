@@ -6,6 +6,7 @@ import { useBriefing } from '../api';
 import { usePlayer, useRememberScreen } from '../PlayerContext';
 import { MailView } from '../shared/MailView';
 import { screenPath } from '../SimulationShell';
+import { SceneBackdrop } from '../layout/Backdrop';
 import { W1Header } from './W1Header';
 
 /** Dr. Anjali's assignment email. Fetching it records that the instruction was shown (server-observed). */
@@ -15,7 +16,8 @@ export function Briefing() {
   const navigate = useNavigate();
   const briefing = useBriefing(attemptId);
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    <div className="relative isolate flex min-h-dvh flex-col">
+      <SceneBackdrop />
       <W1Header section="Inbox" />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Inbox · 1 new message</p>
