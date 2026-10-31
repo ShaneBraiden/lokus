@@ -4,10 +4,10 @@ import { z } from 'zod';
 import type { AssessmentResult } from '#engine';
 import { ATTEMPT_STATUS_LABELS, LOCKDOWN_STRIKE_LIMIT, type AttemptStatus } from '@lokus/shared';
 import type { AppDeps } from '../context';
-import { assessmentResults, attempts, candidateProfiles, invitations, resultShares, shareRequests, users } from '../db/schema';
+import { assessmentResults, attempts, candidateProfiles, hiringDecisions, invitations, resultShares, shareRequests, users } from '../db/schema';
 import { audit } from '../lib/audit';
-import { HttpError, notFound } from '../lib/errors';
-import { parseParams, parseQuery } from '../lib/http';
+import { conflict, HttpError, notFound } from '../lib/errors';
+import { parseBody, parseParams, parseQuery } from '../lib/http';
 import { listEvents } from '../services/eventStore';
 import { buildEmployerReport, employerResult, type EmployerResult } from '../services/employerReport';
 import { latestVersions } from '../services/scoring';
@@ -20,6 +20,10 @@ const ACTIVE = new Set(['not_started', 'w1_in_progress', 'w1_submitted', 'w2_in_
 
 type Progress = 'invited' | 'not_started' | 'in_progress' | 'submitted' | 'closed' | 'withdrawn';
 
+const DECISION_LABELS = { advance: 'Advance', hold: 'Hold', decline: 'Decline' } as const;
+type Decision = keyof typeof DECISION_LABELS;
+const decisionBody = z.object({ decision: z.enum(['advance', 'hold', 'decline']), note: z.string().trim().max(1000).default('') });
+
 /**
  * Employer area (/api/org, behind requireEmployer). An organisation only ever reaches an attempt through an
  * active result share (its own invitation, or the candidate's approval), or through the talent pool for
@@ -30,8 +34,21 @@ export function employerRouter(deps: AppDeps): Router {
   const r = Router();
   const orgOf = (req: Request) => req.auth!.org!;
 
+  /** This organisation's hiring decisions, newest first: for one attempt, or (without one) every attempt. */
+  async function decisionHistory(orgId: string, attemptId?: string) {
+    const rows = await deps.db
+      .select({ d: hiringDecisions, by: users.name })
+      .from(hiringDecisions)
+      .innerJoin(users, eq(users.id, hiringDecisions.decidedBy))
+      .where(and(eq(hiringDecisions.orgId, orgId), attemptId ? eq(hiringDecisions.attemptId, attemptId) : undefined))
+      .orderBy(desc(hiringDecisions.createdAt));
+    return rows.map(({ d, by }) => ({ id: d.id, attempt_id: d.attemptId, decision: d.decision as Decision, label: DECISION_LABELS[d.decision as Decision], note: d.note, decided_by: by, decided_at: d.createdAt }));
+  }
+
   /** One row per invitation; the attempt and result only when this organisation can see them. */
   async function candidateRows(orgId: string) {
+    const latest = new Map<string, Awaited<ReturnType<typeof decisionHistory>>[number]>();
+    for (const d of await decisionHistory(orgId)) if (!latest.has(d.attempt_id)) latest.set(d.attempt_id, d);
     const lv = latestVersions(deps.db);
     const rows = await deps.db
       .select({
@@ -72,6 +89,7 @@ export function employerRouter(deps: AppDeps): Router {
           deadline_at: visible ? attempt!.deadlineAt : inv.deadlineAt,
           submitted_at: visible ? attempt!.submittedAt : null,
           result: res ? { outcome: res.outcome, outcome_label: res.outcome_label, t1: res.t1, t2: res.t2, scores_final: res.scores_final, flags: res.gates.filter((g) => g.fired).map((g) => g.gate_id) } : null,
+          decision: (visible && latest.get(attempt!.id)) || null,
         };
       }),
     );
@@ -117,8 +135,8 @@ export function employerRouter(deps: AppDeps): Router {
       // Neutralise spreadsheet formulas and quote every cell.
       return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
     };
-    const header = ['Name', 'Email', 'Source', 'Progress', 'Outcome', 'Workday 1', 'Workday 2', 'Critical flags', 'Invited', 'Deadline', 'Submitted'];
-    const lines = rows.map((x) => [x.name, x.email, x.source, x.progress_label, x.result?.outcome_label ?? '', x.result?.t1 ?? '', x.result?.t2 ?? '', x.result?.flags.join(' ') ?? '', x.invited_at, x.deadline_at, x.submitted_at].map(cell).join(','));
+    const header = ['Name', 'Email', 'Source', 'Progress', 'Outcome', 'Workday 1', 'Workday 2', 'Critical flags', 'Decision', 'Invited', 'Deadline', 'Submitted'];
+    const lines = rows.map((x) => [x.name, x.email, x.source, x.progress_label, x.result?.outcome_label ?? '', x.result?.t1 ?? '', x.result?.t2 ?? '', x.result?.flags.join(' ') ?? '', x.decision?.label ?? '', x.invited_at, x.deadline_at, x.submitted_at].map(cell).join(','));
     await audit(deps.db, req, { action: 'candidates.exported', targetType: 'organization', targetId: orgOf(req).id, orgId: orgOf(req).id });
     res.set('Content-Type', 'text/csv; charset=utf-8');
     res.set('Content-Disposition', `attachment; filename="lokus-candidates-${deps.clock.now().toISOString().slice(0, 10)}.csv"`);
@@ -175,7 +193,21 @@ export function employerRouter(deps: AppDeps): Router {
     const org = orgOf(req);
     const row = await sharedAttempt(org.id, attemptId);
     await audit(deps.db, req, { action: 'result.viewed', targetType: 'attempt', targetId: attemptId, orgId: org.id });
-    res.json(await report(row));
+    res.json({ ...(await report(row)), decisions: await decisionHistory(org.id, attemptId) });
+  });
+
+  /** Records the organisation's hiring decision on a submitted result. Each save adds a row; the newest is current. */
+  r.post('/results/:attemptId/decision', async (req, res) => {
+    const { attemptId } = parseParams(attemptParam, req);
+    const body = parseBody(decisionBody, req);
+    const org = orgOf(req);
+    const row = await sharedAttempt(org.id, attemptId);
+    if (row.a.status !== 'submitted' && row.a.status !== 'closed') throw conflict('not_submitted', 'You can record a decision once the candidate has submitted.');
+    await deps.db.transaction(async (tx) => {
+      await tx.insert(hiringDecisions).values({ orgId: org.id, attemptId, decision: body.decision, note: body.note, decidedBy: req.auth!.user.id });
+      await audit(tx, req, { action: 'decision.recorded', targetType: 'attempt', targetId: attemptId, orgId: org.id, details: { decision: body.decision } });
+    });
+    res.status(201).json({ decisions: await decisionHistory(org.id, attemptId) });
   });
 
   r.get('/results/:attemptId/report.pdf', async (req, res) => {

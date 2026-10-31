@@ -4,7 +4,7 @@ import { RequireRole, useMe } from '@/lib/auth';
 
 const NAV: NavItem[] = [
   { to: '/org', label: 'Overview', icon: <LayoutDashboard />, end: true },
-  { to: '/org/candidates', label: 'Candidates', icon: <UsersRound /> },
+  { to: '/org/candidates', label: 'Candidate pipeline', icon: <UsersRound /> },
   { to: '/org/invites', label: 'Invitations', icon: <Mail /> },
   { to: '/org/compare', label: 'Compare', icon: <GitCompare /> },
   { to: '/org/talent-pool', label: 'Talent pool', icon: <Search /> },

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { auditLog, candidateProfiles } from '../src/db/schema';
+import { auditLog, candidateProfiles, hiringDecisions } from '../src/db/schema';
 import { recordReviewerRatings } from '../src/services/scoring';
 import { allKeys, createTestContext, makeOrg, makeUser, playPersona, signIn, userByEmail, type TestContext } from './helpers';
 
@@ -96,6 +96,34 @@ describe('employer results', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
     expect((res.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('records hiring decisions as an audited, append-only history private to the organisation', async () => {
+    const path = `/api/org/results/${acmeAttempt}/decision`;
+    expect((await acme.post(path).send({ decision: 'maybe' })).status).toBe(400);
+    expect((await beta.post(path).send({ decision: 'advance' })).status).toBe(404);
+    expect((await (await signIn(ctx, 'casey@example.com')).post(path).send({ decision: 'advance' })).status).toBe(403);
+
+    expect((await acme.post(path).send({ decision: 'hold', note: 'Waiting on the second interview panel.' })).status).toBe(201);
+    const res = await acme.post(path).send({ decision: 'advance', note: '  Strong regulatory judgement.  ' });
+    expect(res.status).toBe(201);
+    expect(res.body.decisions.map((d: { decision: string }) => d.decision)).toEqual(['advance', 'hold']);
+    expect(res.body.decisions[0]).toMatchObject({ label: 'Advance', note: 'Strong regulatory judgement.', decided_by: expect.any(String) });
+
+    expect((await acme.get(`/api/org/results/${acmeAttempt}`)).body.decisions).toHaveLength(2);
+    const row = (await acme.get('/api/org/candidates')).body.candidates.find((c: { name: string }) => c.name === 'Casey Quinn');
+    expect(row.decision).toMatchObject({ decision: 'advance', label: 'Advance' });
+    expect((await acme.get('/api/org/candidates.csv')).text).toMatch(/"Casey Quinn".*"Advance"/);
+
+    const audited = await ctx.deps.db.select().from(auditLog).where(eq(auditLog.action, 'decision.recorded'));
+    expect(audited.filter((a) => a.targetId === acmeAttempt)).toHaveLength(2);
+    let error: unknown = null;
+    try {
+      await ctx.deps.db.update(hiringDecisions).set({ decision: 'decline' }).where(eq(hiringDecisions.attemptId, acmeAttempt));
+    } catch (e) {
+      error = e;
+    }
+    expect(String((error as { cause?: Error })?.cause?.message ?? (error as Error)?.message)).toMatch(/append-only/);
   });
 
   it('stops serving a result once the share is revoked', async () => {

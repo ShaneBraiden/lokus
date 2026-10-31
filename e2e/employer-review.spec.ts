@@ -65,6 +65,22 @@ test('employer invites → candidate accepts and completes → blind assessor re
   await employer.getByRole('row', { name: new RegExp(name) }).click();
   await expect(employer.getByText('Both workdays met the bar, with no critical flags.')).toBeVisible();
   await expect(employer.getByRole('heading', { name: 'Evidence' })).toBeVisible();
+
+  // The employer records a private hiring decision; it shows on the pipeline and in the assessment record.
+  await employer.getByRole('link', { name: 'Make decision' }).click();
+  await employer.locator('#decision').getByText('Advance', { exact: true }).click();
+  await employer.getByLabel('Note for your hiring team').fill('Strong regulatory judgement; book the panel interview.');
+  await employer.getByRole('button', { name: 'Save decision' }).click();
+  await expect(employer.getByText('Decision saved: Advance')).toBeVisible();
+  await employer.getByRole('link', { name: 'Assessment record' }).click();
+  await expect(employer.getByText('“Strong regulatory judgement; book the panel interview.”')).toBeVisible();
+  if (process.env.E2E_SHOTS) await employer.screenshot({ path: `${process.env.E2E_SHOTS}/record.png`, fullPage: true });
+  await employer.goto('/org/candidates');
+  await expect(employer.getByRole('row', { name: new RegExp(name) }).getByText('Advance')).toBeVisible();
+  await employer.goto(`/org/results/${attemptId}`);
+  await expect(employer.getByText('Current: Advance')).toBeVisible();
+  if (process.env.E2E_SHOTS) await employer.screenshot({ path: `${process.env.E2E_SHOTS}/overview.png`, fullPage: true });
+
   const pdf = await employer.request.get(`/api/org/results/${attemptId}/report.pdf`);
   expect(pdf.headers()['content-type']).toBe('application/pdf');
   expect((await pdf.body()).subarray(0, 5).toString()).toBe('%PDF-');

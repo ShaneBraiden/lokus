@@ -1,7 +1,7 @@
 /**
  * Lokus database schema (PostgreSQL via Drizzle). Evidence tables are append-only: a trigger installed by the
  * custom migration rejects UPDATE, DELETE and TRUNCATE on attempt_events, reviewer_ratings, gr_dispositions,
- * consent_events, assessment_results and audit_log. The answer key lives in a separate "confidential" schema.
+ * consent_events, assessment_results, hiring_decisions and audit_log. The answer key lives in a separate "confidential" schema.
  */
 import { sql } from 'drizzle-orm';
 import {
@@ -435,6 +435,31 @@ export const resultShares = pgTable(
     revokedAt: ts('revoked_at'),
   },
   (t) => [index('result_shares_org_idx').on(t.orgId), uniqueIndex('result_shares_active_uq').on(t.attemptId, t.orgId).where(sql`${t.revokedAt} is null`)],
+);
+
+/**
+ * Append-only history of an organisation's hiring decision on a shared result; the newest row is the current one.
+ * Private to the organisation: candidates, assessors and other organisations never see it.
+ */
+export const hiringDecisions = pgTable(
+  'hiring_decisions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => organizations.id),
+    attemptId: uuid('attempt_id')
+      .notNull()
+      .references(() => attempts.id),
+    /** advance | hold | decline */
+    decision: text('decision').notNull(),
+    note: text('note').notNull().default(''),
+    decidedBy: uuid('decided_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('hiring_decisions_org_attempt_idx').on(t.orgId, t.attemptId, t.createdAt), check('hiring_decisions_decision_ck', sql`${t.decision} in ('advance', 'hold', 'decline')`)],
 );
 
 // ---------------------------------------------------------------------------------------------------------------

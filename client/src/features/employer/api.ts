@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { EvidenceView } from '@lokus/shared';
 import { http } from '@/lib/api';
 import type { OutcomeKey } from '@/features/results/Outcome';
@@ -17,6 +17,19 @@ export interface EmployerResult {
   computed_at: string;
 }
 
+export type DecisionKey = 'advance' | 'hold' | 'decline';
+
+/** One entry in the organisation's private, append-only hiring decision history; the newest is current. */
+export interface HiringDecision {
+  id: string;
+  attempt_id: string;
+  decision: DecisionKey;
+  label: string;
+  note: string;
+  decided_by: string;
+  decided_at: string;
+}
+
 export interface CandidateRow {
   invitation_id: string;
   attempt_id: string | null;
@@ -29,6 +42,7 @@ export interface CandidateRow {
   deadline_at: string | null;
   submitted_at: string | null;
   result: { outcome: OutcomeKey; outcome_label: string; t1: number | null; t2: number | null; scores_final: boolean; flags: string[] } | null;
+  decision: HiringDecision | null;
 }
 
 export interface EmployerOverview {
@@ -49,6 +63,8 @@ export interface Report {
   evidence: EvidenceView | null;
   integrity: LockdownIntegrity;
   talent_pool?: boolean;
+  /** Invited and shared results only (not the talent pool), newest first. */
+  decisions?: HiringDecision[];
 }
 
 export interface LockdownIntegrity {
@@ -97,4 +113,15 @@ export const useCandidates = (p: Record<string, string>) =>
   useQuery({ queryKey: orgKeys.candidates(p), queryFn: () => http.get<{ candidates: CandidateRow[] }>(`/org/candidates?${new URLSearchParams(p)}`).then((r) => r.candidates), placeholderData: keepPreviousData });
 export const useInvitations = () => useQuery({ queryKey: orgKeys.invitations, queryFn: () => http.get<{ invitations: InvitationRow[] }>('/org/invitations').then((r) => r.invitations) });
 export const useReport = (id: string, pool = false) => useQuery({ queryKey: orgKeys.report(id, pool), queryFn: () => http.get<Report>(pool ? `/org/talent-pool/${id}` : `/org/results/${id}`), retry: false });
-export const usePool = (q: string) => useQuery({ queryKey: orgKeys.pool(q), queryFn: () => http.get<{ candidates: PoolRow[] }>(`/org/talent-pool${q ? `?query=${encodeURIComponent(q)}` : ''}`).then((r) => r.candidates), placeholderData: keepPreviousData });
+export function useRecordDecision(attemptId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { decision: DecisionKey; note: string }) => http.post<{ decisions: HiringDecision[] }>(`/org/results/${attemptId}/decision`, body),
+    onSuccess: (r) => {
+      qc.setQueryData<Report>(orgKeys.report(attemptId, false), (old) => (old ? { ...old, decisions: r.decisions } : old));
+      void qc.invalidateQueries({ queryKey: ['org', 'candidates'] });
+    },
+  });
+}
+
+export const usePool =(q: string) => useQuery({ queryKey: orgKeys.pool(q), queryFn: () => http.get<{ candidates: PoolRow[] }>(`/org/talent-pool${q ? `?query=${encodeURIComponent(q)}` : ''}`).then((r) => r.candidates), placeholderData: keepPreviousData });

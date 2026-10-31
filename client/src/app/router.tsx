@@ -36,6 +36,13 @@ const employer = () => import('@/features/employer');
 const admin = () => import('@/features/admin');
 const concepts = () => import('@/features/public/concepts');
 
+/** One candidate's tabs in the employer flow, under both /org/results/:id and /org/talent-pool/:id. */
+const candidateTabs = [
+  { index: true, lazy: load(employer, 'CandidateOverview') },
+  { path: 'evidence', lazy: load(employer, 'CandidateEvidence') },
+  { path: 'record', lazy: load(employer, 'CandidateRecord') },
+];
+
 /** Player screens declare the attempt phases in which they are reachable; the shell redirects anything else. */
 export interface ScreenHandle {
   screen: string;
@@ -126,10 +133,10 @@ export const router = createBrowserRouter([
           { index: true, lazy: load(employer, 'EmployerOverview') },
           { path: 'candidates', lazy: load(employer, 'Candidates') },
           { path: 'invites', lazy: load(employer, 'Invites') },
-          { path: 'results/:attemptId', lazy: load(employer, 'ResultReport') },
+          { path: 'results/:attemptId', lazy: load(employer, 'ResultReport'), children: candidateTabs },
           { path: 'compare', lazy: load(employer, 'EmployerCompare') },
           { path: 'talent-pool', lazy: load(employer, 'TalentPool') },
-          { path: 'talent-pool/:attemptId', lazy: load(employer, 'PoolReport') },
+          { path: 'talent-pool/:attemptId', lazy: load(employer, 'PoolReport'), children: candidateTabs },
           { path: 'settings', lazy: load(employer, 'TeamSettings') },
           { path: '*', element: <NotFound /> },
         ],

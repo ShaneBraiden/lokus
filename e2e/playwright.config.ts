@@ -30,7 +30,8 @@ export default defineConfig({
       url: 'http://localhost:4001/api/health',
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { NODE_ENV: 'development', PGLITE_DIR: '.data/e2e-pglite', SEED_DEMO: 'true', REQUIRE_STAFF_MFA: 'false', APP_URL: 'http://localhost:5174', LOG_LEVEL: 'warn' },
+      // The journeys follow emailed invitation links, so the testing-phase direct accounts stay off.
+      env: { NODE_ENV: 'development', PGLITE_DIR: '.data/e2e-pglite', SEED_DEMO: 'true', REQUIRE_STAFF_MFA: 'false', DIRECT_ACCOUNTS: 'false', APP_URL: 'http://localhost:5174', LOG_LEVEL: 'warn' },
     },
     {
       command: 'npm run e2e:web -w @lokus/client',

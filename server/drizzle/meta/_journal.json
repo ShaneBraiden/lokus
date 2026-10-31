@@ -43,6 +43,13 @@
       "when": 1793423598460,
       "tag": "0005_talent_pool_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793427309757,
+      "tag": "0006_hiring_decisions",
+      "breakpoints": true
     }
   ]
 }
