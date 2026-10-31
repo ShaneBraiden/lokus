@@ -14,8 +14,8 @@ export function PublicHeader() {
           <a href="/#employers" className="hidden rounded-md px-3 py-2 text-sm font-medium text-ink-2 hover:text-ink sm:inline-block">
             For employers
           </a>
-          <a href="/#candidates" className="hidden rounded-md px-3 py-2 text-sm font-medium text-ink-2 hover:text-ink sm:inline-block">
-            For candidates
+          <a href="/#simulations" className="hidden rounded-md px-3 py-2 text-sm font-medium text-ink-2 hover:text-ink sm:inline-block">
+            Simulations
           </a>
           {me ? (
             <Button asChild size="sm">

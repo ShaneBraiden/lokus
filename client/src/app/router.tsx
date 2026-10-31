@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Outlet, ScrollRestoration, createBrowserRouter } from 'react-router';
+import { Navigate, Outlet, ScrollRestoration, createBrowserRouter } from 'react-router';
 import type { AttemptPhase } from '@lokus/shared';
 import { Landing } from '@/features/public/Landing';
 import { Legal, NotFound } from '@/features/public/Legal';
@@ -34,6 +34,7 @@ const candidate = () => import('@/features/candidate');
 const player = () => import('@/simulation');
 const employer = () => import('@/features/employer');
 const admin = () => import('@/features/admin');
+const concepts = () => import('@/features/public/concepts');
 
 /** Player screens declare the attempt phases in which they are reachable; the shell redirects anything else. */
 export interface ScreenHandle {
@@ -61,15 +62,25 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     hydrateFallbackElement: <PageLoader />,
     children: [
+      // The landing page draws its own header and footer.
+      { index: true, element: <Landing /> },
       {
         element: <PublicLayout />,
         children: [
-          { index: true, element: <Landing /> },
           { path: 'legal/privacy', element: <Legal page="privacy" /> },
           { path: 'legal/terms', element: <Legal page="terms" /> },
           { path: '*', element: <NotFound /> },
         ],
       },
+      // Landing page concepts under review; each draws its own header and footer.
+      { path: 'preview', element: <Navigate to="/preview/desk" replace /> },
+      { path: 'preview/desk', lazy: load(concepts, 'DeskConcept') },
+      { path: 'preview/binder', lazy: load(concepts, 'BinderConcept') },
+      { path: 'preview/workday', lazy: load(concepts, 'WorkdayConcept') },
+      { path: 'preview/catalog', element: <Navigate to="/preview/catalog/desk" replace /> },
+      { path: 'preview/catalog/desk', lazy: load(concepts, 'CatalogDesk') },
+      { path: 'preview/catalog/binder', lazy: load(concepts, 'CatalogBinder') },
+      { path: 'preview/catalog/workday', lazy: load(concepts, 'CatalogWorkday') },
       { path: 'login', lazy: publicOnly(auth, 'SignIn') },
       { path: 'signup', lazy: publicOnly(auth, 'SignUp') },
       { path: 'request-access', lazy: publicOnly(auth, 'RequestAccess') },

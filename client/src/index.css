@@ -57,6 +57,11 @@
   --animate-drift: drift 18s ease-in-out infinite alternate;
   --animate-dash: dash 1.4s linear infinite;
   --animate-pulse-ring: pulse-ring 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  --animate-step-in: step-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes step-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -163,20 +168,19 @@
   }
 }
 
-/* Field guide: the step's target lifts off the page, slightly larger, on a soft shadow. Nothing else is dimmed. */
+/* Field guide: the step's target lifts off the page, larger, on a surface ring and a deep shadow. The guide draws the dim around it. */
 [data-guide-lift] {
   position: relative;
   z-index: 41;
   border-radius: 12px;
   transform: scale(var(--guide-scale, 1.03));
   box-shadow:
-    0 0 0 6px var(--color-surface),
-    0 0 0 7.5px var(--color-accent-line),
-    0 22px 44px -10px rgb(28 36 48 / 0.32),
-    0 8px 16px -8px rgb(28 36 48 / 0.18);
+    0 0 0 8px var(--color-surface),
+    0 30px 60px -14px rgb(20 26 36 / 0.45),
+    0 10px 20px -10px rgb(20 26 36 / 0.25);
   transition:
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-guide-lift='fill'] {
   background-color: var(--color-surface);
