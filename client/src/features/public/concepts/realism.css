@@ -1,0 +1,166 @@
+/* Realistic materials for the landing concepts: ink, tape, thermal paper, wood, cork and the light in the room.
+   Colours are local so they never depend on which theme variables the main stylesheet happens to emit. */
+.lk-real {
+  --lk-paper: #fffdf8;
+  --lk-toner: #23211f;
+  --lk-pen: #1f3d8a;
+  --lk-marker: #fde68a;
+  --lk-copper: #b85f43;
+  --lk-accent: #a04e35;
+  --lk-ink: #1c2430;
+  --lk-green: #1f7a52;
+  --lk-red: #b4261c;
+}
+
+/* Rubber-stamp ink: speckled where the stamp did not quite take. */
+.lk-ink-grunge {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  -webkit-mask-size: 160px 160px;
+  mask-size: 160px 160px;
+}
+
+/* Highlighter: swept across the words the first time they scroll into view. */
+.lk-marker {
+  color: inherit;
+  background-color: transparent;
+  background-image: linear-gradient(100deg, transparent 0.5%, rgb(253 230 138 / 0.9) 2.5%, rgb(252 222 112 / 0.95) 50%, rgb(253 230 138 / 0.85) 97.5%, transparent 99.5%);
+  background-repeat: no-repeat;
+  background-position: 0 70%;
+  background-size: 0% 78%;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.14em;
+  margin: 0 -0.14em;
+  transition: background-size 1000ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.lk-marker[data-on='true'] {
+  background-size: 100% 78%;
+}
+
+/* Masking tape with torn ends. */
+.lk-tape {
+  background: linear-gradient(180deg, rgb(248 241 222 / 0.86), rgb(235 224 196 / 0.8));
+  box-shadow: 0 1px 1px rgb(60 45 30 / 0.12);
+  clip-path: polygon(2% 0, 98% 0, 100% 14%, 97% 28%, 100% 42%, 97% 57%, 100% 71%, 97% 86%, 99% 100%, 1% 100%, 3% 86%, 0 71%, 3% 57%, 0 42%, 3% 28%, 0 14%);
+}
+
+/* Thermal paper and torn receipt edges. */
+.lk-zigzag-b {
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 12px 100%;
+}
+
+/* Desk wood: long grain from stretched noise, a varnish sheen on top. */
+.lk-wood {
+  background-color: #a9794d;
+  background-image:
+    linear-gradient(180deg, rgb(255 236 210 / 0.22), transparent 38%, rgb(40 20 5 / 0.18)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='240'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0035 .16' numOctaves='4' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .18 0 0 0 0 .07 0 0 0 1.25 -.42'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+  background-size: auto, 900px 240px;
+}
+
+/* Cork board. */
+.lk-cork {
+  background-color: #c39466;
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgb(255 230 190 / 0.25), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .2 0 0 0 0 .08 0 0 0 1.6 -.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+}
+
+/* Painted plaster wall. */
+.lk-plaster {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .27 0 0 0 0 .22 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+
+/* Binder pages: type scales with the page (a container), never below a readable size. */
+.lk-page {
+  container-type: inline-size;
+}
+.lk-t-xs { font-size: max(10px, 1.85cqw); }
+.lk-t-sm { font-size: max(11.5px, 2.45cqw); }
+.lk-t-base { font-size: max(12.5px, 2.9cqw); }
+.lk-t-lg { font-size: max(14px, 3.5cqw); }
+.lk-t-xl { font-size: max(18px, 4.6cqw); }
+.lk-t-2xl { font-size: max(22px, 5.8cqw); }
+.lk-t-3xl { font-size: max(27px, 7.2cqw); }
+
+/* Vinyl binder covers. */
+.lk-vinyl {
+  background-color: #1f2c3f;
+  background-image:
+    linear-gradient(135deg, rgb(255 255 255 / 0.07), transparent 40%, rgb(0 0 0 / 0.18)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' seed='5'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E");
+}
+
+/* Line icons drawn on in pen. */
+.lk-draw svg :is(path, line, polyline, polygon, circle, rect, ellipse) {
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.lk-draw[data-on='true'] svg :is(path, line, polyline, polygon, circle, rect, ellipse) {
+  stroke-dashoffset: 0;
+}
+
+/* Small life in the room: steam off the coffee, a buzzing phone, a ticking clock, drifting clouds, a swaying plant. */
+.lk-steam {
+  animation: lk-steam 4.2s ease-out infinite;
+}
+.lk-buzz {
+  animation: lk-buzz 0.5s linear 3;
+}
+.lk-tick {
+  animation: lk-tick 60s steps(60) infinite;
+}
+.lk-cloud {
+  animation: lk-cloud 90s linear infinite;
+}
+.lk-sway {
+  transform-origin: 50% 100%;
+  animation: lk-sway 7s ease-in-out infinite;
+}
+.lk-holo {
+  background: conic-gradient(from var(--lk-holo, 0deg), #f6c2d2, #c9e6f6, #d7f5c8, #f8eab2, #e3c8f7, #f6c2d2);
+  animation: lk-holo 6s linear infinite;
+}
+@property --lk-holo {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes lk-steam {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  25% { opacity: 0.5; }
+  100% { transform: translateY(-48px) scaleX(1.7); opacity: 0; }
+}
+@keyframes lk-buzz {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  20% { translate: -2px 0; rotate: -1.5deg; }
+  40% { translate: 2px 0; rotate: 1.5deg; }
+  60% { translate: -2px 0; rotate: -1deg; }
+  80% { translate: 2px 0; rotate: 1deg; }
+}
+@keyframes lk-tick {
+  to { rotate: 360deg; }
+}
+@keyframes lk-cloud {
+  from { translate: -30% 0; }
+  to { translate: 130% 0; }
+}
+@keyframes lk-sway {
+  0%, 100% { rotate: -1.6deg; }
+  50% { rotate: 1.6deg; }
+}
+@keyframes lk-holo {
+  to { --lk-holo: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-steam, .lk-buzz, .lk-tick, .lk-cloud, .lk-sway, .lk-holo {
+    animation: none !important;
+  }
+  .lk-marker, .lk-draw svg * {
+    transition: none !important;
+  }
+}

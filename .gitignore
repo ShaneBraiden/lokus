@@ -17,4 +17,3 @@ test-results/
 
 # reference material imported from the AI Studio export (not part of the build)
 _import/
-client/src/features/public/concepts/
